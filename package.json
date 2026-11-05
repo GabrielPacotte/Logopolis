@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check:docs": "node scripts/check-docs.mjs",
+    "check:agent-governance": "node scripts/check-agent-governance.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "audit": "npm audit --audit-level=high"
   },

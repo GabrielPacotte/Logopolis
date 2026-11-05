@@ -33,6 +33,8 @@ jobs:
         run: npm test
       - name: Documentation links
         run: npm run check:docs
+      - name: Agent governance
+        run: npm run check:agent-governance
       - name: Secret scan
         run: npm run check:secrets
       - name: Dependency audit

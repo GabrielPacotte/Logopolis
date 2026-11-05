@@ -18,5 +18,8 @@
 | [ADR](adr/README.md)                                              | Décisions d'architecture                            |
 | [Gouvernance GitHub](github-governance.md)                        | État vérifié, checklist PO et CODEOWNERS            |
 | [Livraison propre](delivery.md)                                   | Archive partageable sans métadonnées ni secrets     |
+| [Politique de ressources IA](engineering/AI_RESOURCE_POLICY.md)   | Efficacité durable sans compromis de qualité        |
+| [Rôles des agents](governance/AGENT_ROLES.md)                     | Responsabilités et limites d'autorité               |
+| [Workflow agents](governance/WORKFLOW.md)                         | Cycle issue, délégation, revue et PR                |
 
 Les questions marquées **Arbitrage PO** ne doivent pas être transformées en implémentation avant décision explicite.
