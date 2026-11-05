@@ -1,0 +1,21 @@
+name: Anomalie
+description: Signaler un comportement reproductible
+title: "bug: "
+labels: ["type: bug", "status: triage"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Comportement observé et étapes de reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact, sécurité et données concernées

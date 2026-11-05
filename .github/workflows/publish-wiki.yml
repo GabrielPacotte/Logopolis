@@ -1,0 +1,43 @@
+name: Publish documentation to Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/publish-wiki.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WIKI_PUSH_TOKEN: ${{ secrets.WIKI_PUSH_TOKEN }}
+    steps:
+      - name: Explain skipped publication when not configured
+        if: ${{ env.WIKI_PUSH_TOKEN == '' }}
+        run: |
+          echo '::notice::Wiki publication skipped: WIKI_PUSH_TOKEN is not configured.'
+      - name: Checkout
+        if: ${{ env.WIKI_PUSH_TOKEN != '' }}
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Publish docs as Wiki pages
+        if: ${{ env.WIKI_PUSH_TOKEN != '' }}
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -eu
+          git config --global user.name 'logopolis-docs-bot'
+          git config --global user.email 'logopolis-docs-bot@users.noreply.github.com'
+          auth="$(printf 'x-access-token:%s' "$WIKI_PUSH_TOKEN" | base64 | tr -d '\n')"
+          git -c http.extraheader="AUTHORIZATION: basic $auth" clone "https://github.com/${REPOSITORY}.wiki.git" wiki
+          mkdir -p wiki/Logopolis
+          # Destructive synchronization is intentionally limited to the derived pages below.
+          rsync -a --delete docs/ wiki/Logopolis/
+          cd wiki
+          git add --all
+          git diff --cached --quiet || git commit -m 'docs: publish repository documentation'
+          git push

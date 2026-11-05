@@ -1,0 +1,30 @@
+name: Fonctionnalité
+description: Proposer un besoin à spécifier avant développement
+title: "feat: "
+labels: ["type: feature", "status: needs-spec"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème / valeur utilisateur
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation
+      description: Décrire les résultats observables, pas la solution technique.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risques et arbitrages PO
+      description: Droits d'auteur, modération, vie privée, sécurité, IA, accessibilité.
+  - type: checkboxes
+    id: workflow
+    attributes:
+      label: Préconditions
+      options:
+        - label: Je créerai/lierai une spécification avant tout développement.
+          required: true
