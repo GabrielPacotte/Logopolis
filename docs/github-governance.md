@@ -13,7 +13,3 @@ Le QA a lu le ruleset actif `prod-protection` (identifiant `26631365`) et le run
 5. Limiter la fusion à une équipe de mainteneurs distincte de l'auteur; créer les équipes GitHub nécessaires. GitHub contrôle des identités, pas le rôle narratif « QA ».
 6. Créer un environnement de production avec approbation humaine; ne lui donner aucun secret avant besoin explicite.
 7. Initialiser le Wiki, puis créer un jeton finement limité à ce Wiki/repository et le stocker comme secret `WIKI_PUSH_TOKEN`.
-
-## CODEOWNERS
-
-[`.github/CODEOWNERS.example`](../.github/CODEOWNERS.example) est un modèle intentionnellement inactif : le PO doit remplacer l'équipe fictive et le copier vers `.github/CODEOWNERS`. L'activer sans équipe réelle bloquerait les PR. Il désigne des propriétaires de chemins mais ne prouve ni la compétence QA ni une séparation d'identités à lui seul.
