@@ -10,5 +10,6 @@ Une issue ne peut être proposée à la fusion que si :
 - docs, ADR et changelog éventuel sont à jour;
 - aucun secret, donnée personnelle ou vulnérabilité bloquante n'est introduit;
 - CI, revue humaine et règles de branche requises sont satisfaites.
+- Pour la fondation technique : toutes les commandes de `package.json` et les contrôles GitHub applicables sont documentés avec leur résultat; toute limite d'autorisation est explicitement signalée.
 
 « Done » ne signifie jamais « fusionné » ni « déployé » : chacune de ces actions requiert l'autorisation explicite du PO.

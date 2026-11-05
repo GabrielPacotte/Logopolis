@@ -11,6 +11,13 @@ La sécurité est une exigence produit : Logopolis héberge des comptes, créati
 - Journaliser les événements de sécurité nécessaires sans mots de passe, jetons, textes privés ou données personnelles excessives.
 - Dépendances verrouillées, mises à jour suivies et analyse de vulnérabilités en CI dès que les manifests existent.
 
+## Fondation vérifiable
+
+- `.gitignore` exclut les fichiers `.env` et réautorise uniquement `.env.example`, qui ne contient aucune valeur secrète.
+- Les secrets GitHub restent dans GitHub Secrets, jamais dans le dépôt ou les logs. Les environnements de déploiement devront exiger une approbation humaine avant toute utilisation.
+- Les données de test sont synthétiques; aucune œuvre, donnée personnelle ou donnée de production ne doit être committée.
+- Dependabot surveille npm et les GitHub Actions; `npm audit` et `npm run check:secrets` s'exécutent dans la CI. Le scan par motifs est une défense de base, pas une garantie absolue : une revue humaine demeure obligatoire.
+
 ## Revue QA & Security
 
 Pour chaque PR : surface d'attaque modifiée, contrôle d'accès, validation, exposition de données, dépendances, erreurs/logs, tests négatifs et impact vie privée. Une vulnérabilité critique ou élevée bloque la PR jusqu'à correction ou acceptation écrite et limitée dans le temps par le PO.

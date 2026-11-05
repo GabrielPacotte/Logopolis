@@ -34,4 +34,8 @@ Ne jamais inclure de secrets, données de production ou œuvres non autorisées 
 4. Ajouter la preuve de vérification à la PR; mettre à jour les documents concernés dans le même changement.
 5. S'arrêter après le périmètre approuvé. Les actions externes (push, création de PR, approbation, fusion, déploiement) nécessitent l'autorisation correspondante du workflow et du PO.
 
-Les sous-agents Codex sont éphémères : ces rôles sont des responsabilités documentées et non des comptes GitHub. Le coordinateur les délègue via les mécanismes multi-agents disponibles, de préférence un seul à la fois afin de limiter la consommation.
+## Limites des mécanismes d'agents
+
+`AGENTS.md` est une instruction persistante lue par Codex dans ce dépôt : il ne crée aucun agent, aucun compte et aucune permission. Les trois rôles ci-dessus sont donc des responsabilités documentées. Lorsqu'un environnement Codex expose les primitives de délégation (`spawn_agent`, message et attente), le PM peut créer un sous-agent **éphémère** et lui confier un rôle pour une tâche donnée. La preuve est alors une trace de délégation et un rapport, pas ce fichier.
+
+Aucune configuration `.codex/` n'est ajoutée : dans cet environnement, aucun format de fichier local officiellement supporté ne permet de déclarer ou d'invoquer durablement ces deux sous-agents. Une telle configuration ne serait pas une preuve de délégation. Les identités, équipes, CODEOWNERS et permissions GitHub sont des mécanismes distincts, à administrer dans GitHub; ils ne prouvent pas qu'un reviewer humain est le QA désigné.

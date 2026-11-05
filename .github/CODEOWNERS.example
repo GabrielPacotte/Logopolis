@@ -1,0 +1,5 @@
+# Example only — GitHub ignores this file until the PO copies it to .github/CODEOWNERS
+# and replaces @GabrielPacotte/logopolis-maintainers with real identities or a team.
+* @GabrielPacotte/logopolis-maintainers
+/.github/ @GabrielPacotte/logopolis-maintainers
+/docs/ @GabrielPacotte/logopolis-maintainers

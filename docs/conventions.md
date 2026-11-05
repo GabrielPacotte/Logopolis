@@ -6,4 +6,4 @@
 - Ne pas accéder à la base, à l'environnement, au réseau ou à l'heure système directement depuis le domaine; injecter des ports/adaptateurs.
 - Ne pas masquer une règle métier dans un contrôleur, un composant ou une migration. Ne pas dupliquer un contrat partagé.
 - Chaque changement public met à jour sa spécification, ses tests et la documentation touchée. Les choix non triviaux deviennent un ADR.
-- Formatage, lint, typecheck, tests unitaires et contrôle des liens/docs seront normalisés quand les outils seront installés; la CI devra les exécuter sans mode interactif.
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run check:docs`, `npm run check:secrets` et `npm run audit` sont non interactifs et doivent rester verts localement et dans la CI.

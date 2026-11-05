@@ -18,4 +18,4 @@
 - Exiger les checks CI (format, lint, typecheck, tests unitaires/intégration/E2E selon périmètre, scan sécurité) dès leur mise en place.
 - Configurer des environnements avec approbation humaine pour tout déploiement.
 
-GitHub ne peut pas imposer à lui seul que le reviewer soit « QA » : cette séparation doit être appliquée par les droits d'équipe, la règle de protection et la checklist de PR. **Arbitrage PO :** définir les comptes/équipes GitHub et les règles de protection exactes.
+GitHub ne peut pas imposer à lui seul que le reviewer soit « QA » : cette séparation doit être appliquée par les droits d'équipe, la règle de protection et la checklist de PR. L'état réellement constaté et les actions exactes à effectuer sont dans [la checklist GitHub](github-governance.md). **Arbitrage PO :** définir les comptes/équipes GitHub et les règles de protection exactes.
