@@ -27,9 +27,7 @@ server.use([() => import('@adonisjs/cors/cors_middleware')])
  * The router middleware stack runs middleware on all the HTTP
  * requests with a registered route.
  */
-router.use([
-  () => import('@adonisjs/core/bodyparser_middleware'),
-])
+router.use([() => import('@adonisjs/core/bodyparser_middleware')])
 
 /**
  * Named middleware collection must be explicitly assigned to
