@@ -7,7 +7,7 @@
 - Références : `VISION.md`, [ADR 0001](../adr/0001-modular-hexagonal-architecture.md), `docs/architecture.md`, `docs/testing.md`, `docs/security.md`.
 - Décisions PO approuvées :
   - monorepo npm workspaces ;
-  - Node.js 24 LTS et npm 11, cohérents en local, CI et documentation ;
+  - Node.js 26 et npm 11, cohérents en local, CI et documentation ;
   - PostgreSQL 16 avec Docker Compose en développement local et base PostgreSQL éphémère en CI ;
   - aucun package partagé `contracts` ou `test-support` tant qu’un besoin concret ne le justifie ;
   - `/health/live` vérifie la disponibilité du processus API ; `/health/ready` vérifie notamment PostgreSQL.
@@ -44,7 +44,7 @@ Une application AdonisJS TypeScript démarre, est construite et se connecte à P
 
 ### Environnement, sécurité et exploitation locale
 
-- La version Node.js 24 LTS et npm 11 est déclarée de manière cohérente dans les manifests, CI et documentation.
+- La version Node.js 26 et npm 11 est déclarée de manière cohérente dans les manifests, CI et documentation.
 - Docker Compose fournit PostgreSQL 16 au développeur local. Aucun secret n’est commité.
 - `.env.example` documente uniquement les variables nécessaires et utilise des valeurs sûres d’exemple.
 - La configuration refuse ou signale clairement les variables obligatoires absentes, sans les journaliser.
@@ -60,7 +60,7 @@ Une application AdonisJS TypeScript démarre, est construite et se connecte à P
 ## Scénarios d’acceptation
 
 1. **Installation cohérente**
-   - Étant donné un clone propre et Node.js 24 LTS/npm 11,
+   - Étant donné un clone propre et Node.js 26/npm 11,
    - quand les dépendances verrouillées sont installées,
    - alors les commandes qualité, build et test documentées s’exécutent sans version implicite différente dans la CI.
 
@@ -98,7 +98,7 @@ Une application AdonisJS TypeScript démarre, est construite et se connecte à P
 - Aucune donnée personnelle, œuvre, compte, secret ou donnée de production.
 - Les endpoints de santé ne divulguent pas la chaîne de connexion, le fournisseur, les traces ou la structure de la base.
 - Les logs ne contiennent pas de secret ; les erreurs de préparation sont corrélables côté serveur sans exposition publique excessive.
-- Les dépendances ajoutées sont verrouillées, compatibles Node 24/npm 11 et soumises à l’audit existant.
+- Les dépendances ajoutées sont verrouillées, compatibles Node 26/npm 11 et soumises à l’audit existant.
 
 ## Conception et contraintes d’architecture
 
