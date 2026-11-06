@@ -9,7 +9,7 @@ La plateforme devra évoluer sans enfermer les règles littéraires et communaut
 
 ## Proposition
 
-Proposer le découpage décrit dans `docs/architecture.md` : modules métier verticaux, chacun avec domaine, application, adaptateurs et tests. Les applications Next.js/AdonisJS sont les adaptateurs entrants et points de composition; les migrations PostgreSQL restent sous `apps/api/database/migrations/<module>/`. Seuls `contracts` et `test-support` sont transverses, avec des responsabilités limitées. Éviter le microservice prématuré et les abstractions sans cas d'usage.
+Proposer le découpage décrit dans `docs/architecture.md` : modules métier verticaux, chacun avec domaine, application, adaptateurs et tests. Les applications Next.js/AdonisJS sont les adaptateurs entrants et points de composition; les migrations PostgreSQL restent sous `apps/api/database/migrations/<module>/`. Les éventuels packages transverses `contracts` et `test-support` ont des responsabilités limitées et ne sont créés qu'à partir d'un besoin démontré. Éviter le microservice prématuré et les abstractions sans cas d'usage.
 
 ## Conséquences
 

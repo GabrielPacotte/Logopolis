@@ -15,12 +15,12 @@ packages/
     application/                    # cas d'usage, commandes/requêtes, ports sortants
     adapters/                       # persistance, services externes, mappings
     test/                           # fabriques et tests du module
-  contracts/                        # seuls contrats API stables, validés aux frontières
-  test-support/                     # doubles et fabriques partagés non métier
+  contracts/                        # créé seulement si un contrat API stable partagé le nécessite
+  test-support/                     # créé seulement si des doubles/fabriques partagés le nécessitent
 docs/
 ```
 
-Un module (`works`, `profiles`, `library`, `interactions` à terme) possède ses couches. Il n'existe pas de packages globaux `domain` ou `application` : cela évite de disperser le modèle métier entre une organisation horizontale et une organisation verticale. `contracts` n'accueille ni entité ni règle métier; il ne contient que les contrats publics nécessaires à plusieurs consommateurs.
+Un module (`works`, `profiles`, `library`, `interactions` à terme) possède ses couches. Il n'existe pas de packages globaux `domain` ou `application` : cela évite de disperser le modèle métier entre une organisation horizontale et une organisation verticale. Les packages `contracts` et `test-support` ne sont créés qu'à partir d'un besoin concret et partagé ; `contracts` n'accueille alors ni entité ni règle métier, seulement les contrats publics nécessaires à plusieurs consommateurs.
 
 ## Règles de dépendance et d'import
 
