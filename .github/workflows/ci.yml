@@ -46,6 +46,8 @@ jobs:
       - name: Unit tests
         run: npm test
       - name: API integration tests with PostgreSQL
+        env:
+          DB_PORT: 5432
         run: npm run test:integration
       - name: API integration tests without PostgreSQL
         run: npm run test:integration:unready

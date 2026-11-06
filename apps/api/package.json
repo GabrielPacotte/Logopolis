@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test:integration": "node ace test functional",
+    "test:integration": "DB_PORT=${DB_PORT:-5433} node ace test functional",
     "test:integration:unready": "EXPECT_DATABASE_READY=false DB_PORT=1 node ace test functional",
     "migration:run": "node ace migration:run"
   },

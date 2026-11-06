@@ -17,5 +17,6 @@
     "packages/**/*.ts",
     "tests/**/*.ts",
     "scripts/**/*.ts"
-  ]
+  ],
+  "exclude": ["apps/api/database/schema.ts"]
 }
