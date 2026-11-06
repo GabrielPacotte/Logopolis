@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
 const root = process.cwd();
@@ -28,18 +28,20 @@ function inspect(directory, layer) {
   }
 }
 
-for (const module of readdirSync(packagesRoot, { withFileTypes: true })) {
-  if (
-    !module.isDirectory() ||
-    ["contracts", "test-support"].includes(module.name)
-  )
-    continue;
-  for (const layer of ["domain", "application"]) {
-    const path = join(packagesRoot, module.name, layer);
-    try {
-      inspect(path, layer);
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+if (existsSync(packagesRoot)) {
+  for (const module of readdirSync(packagesRoot, { withFileTypes: true })) {
+    if (
+      !module.isDirectory() ||
+      ["contracts", "test-support"].includes(module.name)
+    )
+      continue;
+    for (const layer of ["domain", "application"]) {
+      const path = join(packagesRoot, module.name, layer);
+      try {
+        inspect(path, layer);
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
     }
   }
 }
