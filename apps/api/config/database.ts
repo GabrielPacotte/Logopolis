@@ -1,4 +1,3 @@
-import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/lucid'
 import env from '#start/env'
 
@@ -9,20 +8,16 @@ const dbConfig = defineConfig({
   connection: 'pg',
 
   connections: {
-    /**
-     * SQLite connection (default).
-     */
     pg: {
       client: 'pg',
-      connection: { host: env.get('DB_HOST'), port: env.get('DB_PORT'), user: env.get('DB_USER'), password: env.get('DB_PASSWORD'), database: env.get('DB_DATABASE') },
+      connection: {
+        host: env.get('DB_HOST'), port: env.get('DB_PORT'), user: env.get('DB_USER'), password: env.get('DB_PASSWORD'), database: env.get('DB_DATABASE'),
+      },
       migrations: { naturalSort: true, paths: ['database/migrations'] },
     },
 
-    /**
-     * PostgreSQL connection.
-     * Install package to switch: npm install pg
-     */
-    // pg: {
+    // Future database drivers deliberately belong in a future ADR/issue.
+    /* pg: {
     //   client: 'pg',
     //   connection: {
     //     host: env.get('DB_HOST'),
@@ -40,7 +35,7 @@ const dbConfig = defineConfig({
     //     rulesPaths: ['./database/schema_rules.js'],
     //   },
     //   debug: app.inDev,
-    // },
+    }, */
 
     /**
      * MySQL / MariaDB connection.
