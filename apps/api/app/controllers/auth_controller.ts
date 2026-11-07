@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import type { SessionGuard, SessionLucidUserProvider } from '@adonisjs/auth/session'
 import vine from '@vinejs/vine'
 import {
   InvalidPasswordError,
@@ -7,6 +8,17 @@ import {
 } from '../modules/identity/domain/authentication_errors.js'
 import * as authentication from '../modules/identity/application/authentication_service.js'
 import type User from '#models/user'
+
+type WebSessionGuard = SessionGuard<false, SessionLucidUserProvider<typeof User>>
+
+/**
+ * {the Adonis HTTP auth service is configured with the `web` session guard} => {returns the concrete session guard used for login and logout}
+ *
+ * Invariants: the cast is local to the framework boundary; application authorization remains server-side.
+ */
+function webSessionGuard(auth: HttpContext['auth']): WebSessionGuard {
+  return auth.use('web' as never) as unknown as WebSessionGuard
+}
 
 const credentialsValidator = vine.compile(
   vine.object({ email: vine.string().trim().email({}), password: vine.string() })
@@ -75,7 +87,7 @@ export default class AuthController {
       const payload = await request.validateUsing(credentialsValidator)
       const user = await authentication.authenticate(payload.email, payload.password)
       if (!user) return response.unauthorized({ message: 'Invalid email or password.' })
-      await auth.use('web').login(user)
+      await webSessionGuard(auth).login(user)
       session.put('identity.authVersion', user.authVersion)
       await session.tag(user.id)
       return response.ok({ user: userResponse(user) })
@@ -86,8 +98,8 @@ export default class AuthController {
 
   /** {a valid authenticated session exists} => {invalidates it and returns no private content} */
   async logout({ response, auth, session }: HttpContext) {
-    await session.untag(auth.user!.id)
-    await auth.use('web').logout()
+    await session.untag(webSessionGuard(auth).user!.id)
+    await webSessionGuard(auth).logout()
     return response.noContent()
   }
 
