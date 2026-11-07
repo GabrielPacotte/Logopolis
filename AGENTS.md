@@ -48,7 +48,6 @@ Aucune configuration `.codex/` n'est ajoutée : la documentation officielle cons
 
 Les modèles, l'effort de raisonnement, les outils et la concurrence sont des paramètres de session/agent lorsqu'une interface les expose. Ne pas les simuler dans ce dépôt et ne jamais modifier les réglages globaux du PO sans autorisation explicite.
 
-
 ## Barrière obligatoire avant revue humaine
 
 - Toute PR est créée ou reconvertie en **brouillon** tant que les contrôles CI du dernier commit de tête ne sont pas tous terminés avec succès.
