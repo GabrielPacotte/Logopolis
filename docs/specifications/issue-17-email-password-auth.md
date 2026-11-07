@@ -73,7 +73,7 @@ Les fonctions métier, de sécurité, d’autorisation, de transformation ou non
 
 ### Décisions et ADR nécessaires
 
-Aucun nouvel ADR n’est requis à ce stade. Le Developer documente dans la PR le mécanisme Adonis choisi pour hachage, sessions, anti-CSRF, persistance et e-mail. Un fournisseur d’e-mail de production n’est pas figé : l’adaptateur et les variables d’environnement rendent ce choix substituable.
+Aucun nouvel ADR n’est requis à ce stade. Le Developer documente dans la PR le mécanisme choisi pour hachage, sessions, anti-CSRF, persistance et e-mail. Resend est l’adaptateur HTTP retenu pour la production de cette itération ; la frontière d’adaptateur conserve la substituabilité. La clé Resend et la vérification du domaine d’expédition sont des prérequis opérationnels avant production.
 
 ### Tests unitaires, intégration, E2E et sécurité
 

@@ -1,10 +1,13 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import mail from '@adonisjs/mail/services/main'
+import {
+  clearTestOutbox,
+  getTestOutbox,
+  type IdentityMail,
+} from '../../app/modules/identity/adapters/identity_mailer.js'
 
-function tokenFromLastEmail(fakeMailer: ReturnType<typeof mail.fake>) {
-  const message = fakeMailer.messages.sent().at(-1)!
-  const match = String(message.nodeMailerMessage.text).match(/[?&]token=([^\s]+)/)
+function tokenFromLastEmail(message: IdentityMail) {
+  const match = message.text.match(/[?&]token=([^\s]+)/)
   if (!match) throw new Error('Expected an identity token in test email')
   const token = match[1]
   if (!token) throw new Error('Expected a non-empty identity token in test email')
@@ -12,16 +15,12 @@ function tokenFromLastEmail(fakeMailer: ReturnType<typeof mail.fake>) {
 }
 
 test.group('email and password authentication', (group) => {
-  let fakeMailer: ReturnType<typeof mail.fake>
-
   group.each.setup(async () => {
     await db.from('identity_tokens').delete()
     await db.from('identity_users').delete()
     await db.from('identity_rate_limits').delete()
-    fakeMailer = mail.fake()
+    clearTestOutbox()
   })
-
-  group.each.teardown(() => mail.restore())
 
   test('registers an unverified account without persisting a clear-text password', async ({
     client,
@@ -39,7 +38,7 @@ test.group('email and password authentication', (group) => {
     const token = await db.from('identity_tokens').where('user_id', user.id).first()
     assert.exists(token)
     assert.notExists(token.secret_hash.match(/a-safe-password/))
-    fakeMailer.messages.assertSentCount(1)
+    assert.lengthOf(getTestOutbox(), 1)
   })
 
   test('refuses a protected route without a session', async ({ client }) => {
@@ -54,7 +53,9 @@ test.group('email and password authentication', (group) => {
       .json({ email: 'verified@example.test', password: 'a-safe-password' })
     registration.assertStatus(202)
 
-    const token = tokenFromLastEmail(fakeMailer)
+    const message = getTestOutbox().at(-1)
+    if (!message) throw new Error('Expected a verification email in the test outbox')
+    const token = tokenFromLastEmail(message)
     const verification = await client.get('/auth/verify-email').qs({ token })
     verification.assertStatus(204)
     const replay = await client.get('/auth/verify-email').qs({ token })

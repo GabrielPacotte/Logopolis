@@ -16,6 +16,6 @@ Copier `apps/api/.env.example` vers `apps/api/.env`, générer `APP_KEY`, démar
 npm run migration:run --workspace=api
 ```
 
-Pour le développement, configurer SMTP vers une boîte de capture locale telle que Mailpit (`localhost:1025`). Aucun fournisseur réel n’est appelé par les tests ; l’adaptateur d’e-mail peut être doublé.
+En développement et dans les tests, les e-mails transactionnels sont capturés en mémoire : aucun fournisseur réel n’est appelé. En production, l’adaptateur HTTP utilise Resend. `RESEND_API_KEY` est un secret de production hors dépôt et le domaine de `MAIL_FROM_ADDRESS` doit être vérifié dans Resend avant toute mise en service ; sans cette vérification, les messages ne doivent pas être considérés comme délivrables.
 
-Les valeurs SMTP de production, l’URL publique de l’application et les secrets restent hors dépôt. Le cycle de désactivation, réactivation et suppression de compte demeure hors périmètre et relève de l’issue #39.
+L’URL publique de l’application et les secrets restent hors dépôt. Le cycle de désactivation, réactivation et suppression de compte demeure hors périmètre et relève de l’issue #39.
