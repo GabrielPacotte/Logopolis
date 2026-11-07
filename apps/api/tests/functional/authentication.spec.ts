@@ -6,7 +6,9 @@ function tokenFromLastEmail(fakeMailer: ReturnType<typeof mail.fake>) {
   const message = fakeMailer.messages.sent().at(-1)!
   const match = String(message.nodeMailerMessage.text).match(/[?&]token=([^\s]+)/)
   if (!match) throw new Error('Expected an identity token in test email')
-  return decodeURIComponent(match[1])
+  const token = match[1]
+  if (!token) throw new Error('Expected a non-empty identity token in test email')
+  return decodeURIComponent(token)
 }
 
 test.group('email and password authentication', (group) => {
