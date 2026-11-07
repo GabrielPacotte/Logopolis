@@ -47,3 +47,12 @@ Chaque rapport de sous-agent indique mission, résultat ou verdict, vérificatio
 Aucune configuration `.codex/` n'est ajoutée : la documentation officielle consultée documente une configuration utilisateur `~/.codex/config.toml` pour Codex et la création de sous-agents au niveau de session/agent; elle ne documente pas, pour cet environnement, un format `.codex/config.toml` ou `.codex/agents/*.toml` de dépôt qui déclarerait ou invoquerait durablement ces deux sous-agents. Une telle configuration ne serait ni chargée ni une preuve de délégation. Les identités, équipes, CODEOWNERS et permissions GitHub sont des mécanismes distincts, à administrer dans GitHub; ils ne prouvent pas qu'un reviewer humain est le QA désigné.
 
 Les modèles, l'effort de raisonnement, les outils et la concurrence sont des paramètres de session/agent lorsqu'une interface les expose. Ne pas les simuler dans ce dépôt et ne jamais modifier les réglages globaux du PO sans autorisation explicite.
+
+
+## Barrière obligatoire avant revue humaine
+
+- Toute PR est créée ou reconvertie en **brouillon** tant que les contrôles CI du dernier commit de tête ne sont pas tous terminés avec succès.
+- Avant de la présenter au PO ou de la marquer prête pour revue, le PM doit consulter les contrôles du commit de tête et consigner leur résultat dans la PR. Une exécution ancienne, annulée ou relative à un commit précédent ne suffit pas.
+- Si un contrôle échoue, la PR reste en brouillon : l’agent analyse le journal, corrige la cause, pousse le correctif et vérifie une nouvelle exécution verte. Il ne demande pas de revue humaine entre-temps.
+- Pour une PR d’implémentation, cette barrière s’ajoute — sans la remplacer — au verdict QA & Security indépendant publié dans la PR. Pour une PR documentaire, la CI verte demeure obligatoire avant revue humaine.
+- Aucun agent ne contourne, désactive ou assouplit un contrôle de qualité pour rendre une PR présentable.
