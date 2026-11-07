@@ -48,8 +48,19 @@ jobs:
       - name: API integration tests with PostgreSQL
         env:
           DB_PORT: 5432
+          WEB_ORIGIN: http://localhost:3000
+          MAIL_FROM_ADDRESS: no-reply@logopolis.test
+          MAIL_FROM_NAME: Logopolis CI
+          SMTP_HOST: localhost
+          SMTP_PORT: 1025
         run: npm run test:integration
       - name: API integration tests without PostgreSQL
+        env:
+          WEB_ORIGIN: http://localhost:3000
+          MAIL_FROM_ADDRESS: no-reply@logopolis.test
+          MAIL_FROM_NAME: Logopolis CI
+          SMTP_HOST: localhost
+          SMTP_PORT: 1025
         run: npm run test:integration:unready
       - name: Documentation links
         run: npm run check:docs

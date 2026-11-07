@@ -12,7 +12,8 @@ export default defineConfig({
     secure: app.inProduction,
     sameSite: 'lax',
   },
-  store: 'database',
+  // Health-readiness tests intentionally run without PostgreSQL; production and normal integration use PostgreSQL.
+  store: app.inTest && process.env.EXPECT_DATABASE_READY === 'false' ? 'memory' : 'database',
   stores: {
     database: stores.database({ tableName: 'identity_sessions', gcProbability: 2 }),
   },
