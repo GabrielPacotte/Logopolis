@@ -8,6 +8,7 @@ node_modules/
 out/
 build/
 dist/
+apps/api/.adonisjs/
 
 # Tests and coverage
 coverage/
