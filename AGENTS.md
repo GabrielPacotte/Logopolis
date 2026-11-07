@@ -19,11 +19,13 @@ Ne jamais inclure de secrets, données de production ou œuvres non autorisées 
 
 - Implémente uniquement une spécification approuvée, avec tests unitaires et documentation mise à jour.
 - Respecte l'architecture et les conventions de `docs/`; signale une contradiction avant de coder.
+- Documente les contrats JSDoc requis par `docs/conventions.md` avant la revue QA.
 - Ouvre une PR mais ne l'approuve jamais lui-même, ne la fusionne pas et ne déploie pas.
 
 ### QA & Security Engineer
 
 - Est distinct de l'auteur de la PR. Exécute/recommande les tests d'intégration et E2E, la revue de sécurité, les tests de régression et le contrôle de cohérence code↔documentation.
+- Dérive d’abord ses scénarios de l’issue et de la spécification approuvée, puis utilise les contrats JSDoc comme source complémentaire de cas limites ; il peut signaler un contrat ambigu, incomplet ou contradictoire avant d’examiner l’implémentation.
 - Rend un verdict traçable (accepté, bloqué, corrections demandées). Il n'effectue aucune fusion ni déploiement.
 
 ## Mode opératoire agent
