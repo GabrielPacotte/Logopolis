@@ -17,12 +17,30 @@ function tokenFromLastEmail(message: IdentityMail): string {
   return decodeURIComponent(match[1])
 }
 
+/**
+ * {a deferred test mail is expected after a successful public request} => {returns only after the requested outbox size is observable}
+ *
+ * Refus: throws if the bounded test-only wait expires.
+ * Effects: yields the event loop; does not contact an external provider.
+ * Invariants: callers never infer delivery from the HTTP response alone because production delivery is deliberately deferred.
+ */
+async function waitForOutboxLength(expected: number): Promise<readonly IdentityMail[]> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const outbox = getTestOutbox()
+    if (outbox.length >= expected) return outbox
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  }
+  throw new Error(`Expected at least ${expected} message(s) in the test outbox`)
+}
+
 async function register(client: ApiClient, email: string): Promise<void> {
+  const previousMessageCount = getTestOutbox().length
   const response = await client
     .post('/auth/register')
     .withCsrfToken()
     .json({ email, password: testPassphrase })
   response.assertStatus(202)
+  await waitForOutboxLength(previousMessageCount + 1)
 }
 
 test.group('email and password authentication', (group) => {
@@ -45,7 +63,7 @@ test.group('email and password authentication', (group) => {
     const token = await db.from('identity_tokens').where('user_id', user.id).first()
     assert.exists(token)
     assert.notExists(token.secret_hash.match(/safe-password/))
-    assert.lengthOf(getTestOutbox(), 1)
+    assert.lengthOf(await waitForOutboxLength(1), 1)
   })
 
   test('rejects state-changing requests without CSRF protection', async ({ client }) => {
@@ -59,7 +77,7 @@ test.group('email and password authentication', (group) => {
 
   test('verifies once, rejects replay, expiry and concurrent use', async ({ client, assert }) => {
     await register(client, 'verified@example.test')
-    const first = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const first = tokenFromLastEmail((await waitForOutboxLength(1)).at(-1)!)
     const [one, two] = await Promise.all([
       client.get('/auth/verify-email').qs({ token: first }),
       client.get('/auth/verify-email').qs({ token: first }),
@@ -69,7 +87,7 @@ test.group('email and password authentication', (group) => {
     replay.assertStatus(422)
 
     await register(client, 'expired@example.test')
-    const expired = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const expired = tokenFromLastEmail((await waitForOutboxLength(2)).at(-1)!)
     await db
       .from('identity_tokens')
       .where('secret_hash', createHash('sha256').update(expired).digest('hex'))
@@ -83,18 +101,19 @@ test.group('email and password authentication', (group) => {
     assert,
   }) => {
     await register(client, 'resend@example.test')
-    const original = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const original = tokenFromLastEmail((await waitForOutboxLength(1)).at(-1)!)
     const resend = await client
       .post('/auth/verification-email')
       .withCsrfToken()
       .json({ email: 'resend@example.test' })
     resend.assertStatus(202)
-    const replacement = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const replacement = tokenFromLastEmail((await waitForOutboxLength(2)).at(-1)!)
     const oldAttempt = await client.get('/auth/verify-email').qs({ token: original })
     oldAttempt.assertStatus(422)
     const currentAttempt = await client.get('/auth/verify-email').qs({ token: replacement })
     currentAttempt.assertStatus(204)
 
+    clearTestOutbox()
     await register(client, 'concurrent-resend@example.test')
     const concurrentResponses = await Promise.all(
       Array.from({ length: 2 }, () =>
@@ -105,6 +124,7 @@ test.group('email and password authentication', (group) => {
       )
     )
     concurrentResponses.forEach((response) => response.assertStatus(202))
+    await waitForOutboxLength(2)
     const concurrentUser = await db
       .from('identity_users')
       .where('email', 'concurrent-resend@example.test')
@@ -163,7 +183,7 @@ test.group('email and password authentication', (group) => {
     known.assertStatus(202)
     unknown.assertStatus(202)
     known.assertBody(unknown.body())
-    assert.lengthOf(getTestOutbox(), 1)
+    assert.lengthOf(await waitForOutboxLength(1), 1)
   })
 
   test('resets a password once, invalidates sessions, rejects replay and allows the replacement password', async ({
@@ -183,7 +203,7 @@ test.group('email and password authentication', (group) => {
       .withCsrfToken()
       .json({ email: 'reset@example.test' })
     requested.assertStatus(202)
-    const token = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const token = tokenFromLastEmail((await waitForOutboxLength(1)).at(-1)!)
     const reset = await client
       .post('/auth/password-reset/confirm')
       .withCsrfToken()
@@ -220,7 +240,7 @@ test.group('email and password authentication', (group) => {
       .withCsrfToken()
       .json({ email: 'concurrent-reset@example.test' })
       .then((response) => response.assertStatus(202))
-    const token = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const token = tokenFromLastEmail((await waitForOutboxLength(1)).at(-1)!)
     const [one, two] = await Promise.all(
       [testPassphrase, replacementPassphrase].map((password) =>
         client.post('/auth/password-reset/confirm').withCsrfToken().json({ token, password })
@@ -235,7 +255,7 @@ test.group('email and password authentication', (group) => {
       .withCsrfToken()
       .json({ email: 'expired-reset@example.test' })
       .then((response) => response.assertStatus(202))
-    const expired = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const expired = tokenFromLastEmail((await waitForOutboxLength(1)).at(-1)!)
     await db
       .from('identity_tokens')
       .where('secret_hash', createHash('sha256').update(expired).digest('hex'))
