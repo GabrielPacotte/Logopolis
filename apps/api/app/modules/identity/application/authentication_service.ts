@@ -76,6 +76,16 @@ export function createAuthenticationService({
     return secret
   }
 
+  /**
+   * {an unauthenticated address has no eligible account} => {performs the same password-hash class of work used by an eligible identity flow without issuing a usable token}
+   *
+   * Effects: consumes bounded CPU only; no account, token, session or mail state is changed.
+   * Invariants: the generated value is never persisted, returned or logged.
+   */
+  async function performNeutralIdentityWork(): Promise<void> {
+    await hasher.hash(tokens.create())
+  }
+
   return {
     /**
      * {email is syntactically valid and password is submitted by an anonymous visitor} => {creates at most one unverified account and prepares a verification email}
@@ -92,7 +102,10 @@ export function createAuthenticationService({
         now: clock.now(),
       })
       const user = await store.createUser(normalized, await hasher.hash(password), clock.now())
-      if (!user) return
+      if (!user) {
+        await performNeutralIdentityWork()
+        return
+      }
       await mailer.sendVerification(user.email, await issueToken(user, 'verify_email'))
     },
 
@@ -127,7 +140,10 @@ export function createAuthenticationService({
         now: clock.now(),
       })
       const user = await store.findByEmail(normalized)
-      if (!user || user.emailVerifiedAt) return
+      if (!user || user.emailVerifiedAt) {
+        await performNeutralIdentityWork()
+        return
+      }
       await mailer.sendVerification(user.email, await issueToken(user, 'verify_email'))
     },
 
@@ -174,7 +190,10 @@ export function createAuthenticationService({
         now: clock.now(),
       })
       const user = await store.findByEmail(normalized)
-      if (!user) return
+      if (!user) {
+        await performNeutralIdentityWork()
+        return
+      }
       await mailer.sendPasswordReset(user.email, await issueToken(user, 'password_reset'))
     },
 

@@ -11,6 +11,12 @@ type UserRow = {
   password_hash?: string
 }
 
+/**
+ * {row is a persistence projection with no password hash requirement} => {returns only the identity data allowed to cross the application boundary}
+ *
+ * Effects: none.
+ * Invariants: password hashes and database-only column names never leave this adapter.
+ */
 function identityUser(row: UserRow): IdentityUser {
   return {
     id: row.id,
@@ -22,14 +28,24 @@ function identityUser(row: UserRow): IdentityUser {
 
 /** PostgreSQL adapter for the identity persistence port. */
 export const postgresIdentityStore: IdentityStore = {
-  /** {an email exists or not} => {returns its non-secret identity projection or null} */
+  /**
+   * {email is normalized} => {returns its non-secret identity projection or null}
+   *
+   * Effects: reads identity persistence only.
+   * Invariants: no credential hash is selected into an application identity.
+   */
   async findByEmail(email) {
     const row = (await db.from('identity_users').where('email', email).first()) as
       UserRow | undefined
     return row ? identityUser(row) : null
   },
 
-  /** {a normalized email and a framework-hashed password are supplied} => {creates one account or returns null on a duplicate email} */
+  /**
+   * {a normalized email and a framework-hashed password are supplied} => {creates one account or returns null on a duplicate email}
+   *
+   * Effects: inserts at most one row.
+   * Invariants: duplicate registration is handled by SQL conflict resolution, never by logging a database exception containing the email.
+   */
   async createUser(email, passwordHash, now) {
     // `ON CONFLICT DO NOTHING` is deliberately preferred to catching a unique
     // violation: PostgreSQL's error detail includes the conflicting e-mail and
@@ -50,7 +66,12 @@ export const postgresIdentityStore: IdentityStore = {
     return row ? identityUser(row) : null
   },
 
-  /** {email and plain password are supplied} => {returns the identity only if the stored hash verifies, otherwise null after comparable password-work} */
+  /**
+   * {email is normalized and password is supplied} => {returns the identity only if the stored hash verifies, otherwise null after comparable password work}
+   *
+   * Effects: reads identity persistence and computes a password hash/check.
+   * Invariants: unknown and wrong-password outcomes remain indistinguishable to callers and neither input is logged.
+   */
   async authenticate(email, password) {
     const row = (await db.from('identity_users').where('email', email).first()) as
       UserRow | undefined
@@ -64,7 +85,12 @@ export const postgresIdentityStore: IdentityStore = {
     return identityUser(row)
   },
 
-  /** {a token digest and expiry are supplied} => {replaces outstanding same-purpose tokens for the account in one transaction} */
+  /**
+   * {a token digest and expiry are supplied for an existing user} => {replaces outstanding same-purpose tokens for that user in one transaction}
+   *
+   * Effects: consumes prior active tokens then inserts one token.
+   * Invariants: the advisory lock prevents concurrent reissuance from leaving multiple active tokens.
+   */
   async issueToken({ userId, purpose, secretHash, expiresAt, now }) {
     await db.transaction(async (trx) => {
       await trx.rawQuery('SELECT pg_advisory_xact_lock(hashtext(?))', [`${userId}:${purpose}`])
@@ -84,7 +110,13 @@ export const postgresIdentityStore: IdentityStore = {
     })
   },
 
-  /** {a verification digest and current time are supplied} => {atomically consumes one active token and marks only its owner verified} */
+  /**
+   * {a verification digest and current time are supplied} => {atomically consumes one active token and marks only its owner verified}
+   *
+   * Refus: expired, consumed and unknown digests return null.
+   * Effects: updates one token and its owner in one transaction.
+   * Invariants: at most one concurrent caller can consume a token.
+   */
   async consumeVerificationToken(secretHash, now) {
     return db.transaction(async (trx) => {
       const consumed = await trx
@@ -109,7 +141,13 @@ export const postgresIdentityStore: IdentityStore = {
     })
   },
 
-  /** {a reset digest, a framework hash and current time are supplied} => {atomically consumes one token, changes its owner's password and removes every stored session} */
+  /**
+   * {a reset digest, a framework hash and current time are supplied} => {atomically consumes one token, changes its owner's password and removes every stored session}
+   *
+   * Refus: expired, consumed and unknown digests return false.
+   * Effects: changes credentials, increments auth version and deletes sessions in one transaction.
+   * Invariants: a rejected token changes neither password nor session state.
+   */
   async resetPasswordFromToken({ secretHash, passwordHash, now }) {
     return db.transaction(async (trx) => {
       const consumed = await trx

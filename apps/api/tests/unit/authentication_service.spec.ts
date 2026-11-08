@@ -82,13 +82,41 @@ test.group('authentication application service', () => {
   test('keeps a duplicate registration silent and does not issue another token', async ({
     assert,
   }) => {
+    const hashed: string[] = []
     const fixture = dependencies({
       store: { ...dependencies().dependencies.store, createUser: async () => null },
+      hasher: {
+        hash: async (value) => {
+          hashed.push(value)
+          return `hash:${value}`
+        },
+      },
     })
     const service = createAuthenticationService(fixture.dependencies)
 
     await service.register('reader@example.test', 'a-safe-password')
 
+    assert.isEmpty(fixture.sent)
+    assert.lengthOf(hashed, 2)
+    assert.equal(hashed[1], 'raw-test-token')
+  })
+
+  test('performs neutral hash work for absent resend and recovery requests', async ({ assert }) => {
+    const hashed: string[] = []
+    const fixture = dependencies({
+      hasher: {
+        hash: async (value) => {
+          hashed.push(value)
+          return `hash:${value}`
+        },
+      },
+    })
+    const service = createAuthenticationService(fixture.dependencies)
+
+    await service.resendVerification('unknown@example.test')
+    await service.requestPasswordReset('unknown@example.test')
+
+    assert.deepEqual(hashed, ['raw-test-token', 'raw-test-token'])
     assert.isEmpty(fixture.sent)
   })
 
