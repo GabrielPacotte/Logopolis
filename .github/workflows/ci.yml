@@ -59,8 +59,10 @@ jobs:
         run: npm run lint
       - name: Type checking
         run: npm run typecheck
-      - name: Unit tests
+      - name: Foundation unit tests
         run: npm test
+      - name: API unit tests
+        run: npm run test:unit --workspace=api
       - name: Apply API migrations
         env:
           DB_PORT: 5432

@@ -21,6 +21,8 @@ Le Developer livre les tests unitaires avec le code. Le QA choisit et rejoue les
 
 Les seuils de couverture chiffrés seront décidés après le premier module : un pourcentage seul ne remplace pas la couverture des règles et risques.
 
-## Base exécutable de l'issue #1
+## Base exécutable et authentification
 
-Avant le premier module, la CI exécute formatage, lint et frontières d'architecture, TypeScript strict, tests unitaires Vitest, liens Markdown, scan de secrets par motifs configurés et audit npm. Le test unitaire actuel vérifie seulement la disponibilité du harnais : les tests métier ne démarrent qu'après approbation d'une spécification métier.
+La CI exécute formatage, lint et frontières d'architecture, TypeScript strict, les tests unitaires Vitest de fondation, puis les tests unitaires API Japa (`npm run test:unit --workspace=api`) comme étapes distinctes. Elle applique ensuite les migrations PostgreSQL 16 et exécute les tests fonctionnels API, dont les parcours d'authentification et les refus de sécurité. Les liens Markdown, la gouvernance des agents, le scan de secrets et l'audit npm complètent le contrôle.
+
+Pour l'issue #17, les tests fonctionnels couvrent notamment CSRF, réponses neutres, expiration/rejeu/concurrence de jetons, invalidation de session après réinitialisation et quotas PostgreSQL atomiques. Les contrôles E2E navigateur Playwright seront mis en place avec l'infrastructure E2E de l'issue dédiée ; en attendant, le build Next.js vérifie les routes et l'accessibilité est revue explicitement par QA à partir des formulaires livrés.

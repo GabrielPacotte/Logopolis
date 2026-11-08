@@ -13,6 +13,7 @@
     "build": "node ace build",
     "dev": "node ace serve --hmr",
     "test": "node ace test",
+    "test:unit": "NODE_ENV=${NODE_ENV:-test} PORT=${PORT:-3334} HOST=${HOST:-127.0.0.1} LOG_LEVEL=${LOG_LEVEL:-error} APP_NAME=${APP_NAME:-Logopolis tests} APP_KEY=${APP_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa} APP_URL=${APP_URL:-http://localhost:3334} WEB_ORIGIN=${WEB_ORIGIN:-http://localhost:3000} MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-no-reply@logopolis.test} MAIL_FROM_NAME=${MAIL_FROM_NAME:-Logopolis} DB_HOST=${DB_HOST:-localhost} DB_PORT=${DB_PORT:-5433} DB_USER=${DB_USER:-logopolis} DB_PASSWORD=${DB_PASSWORD:-logopolis} DB_DATABASE=${DB_DATABASE:-logopolis} node ace test unit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",

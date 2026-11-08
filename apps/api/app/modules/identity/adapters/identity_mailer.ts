@@ -1,5 +1,5 @@
 import app from '@adonisjs/core/services/app'
-import { appUrl, webUrl } from '#config/app'
+import { webUrl } from '#config/app'
 import env from '#start/env'
 import { Resend } from 'resend'
 import type { IdentityMailer as IdentityMailerPort } from '../application/ports.js'
@@ -65,7 +65,7 @@ export async function deliverIdentityMail(message: IdentityMail): Promise<void> 
  * Invariants: the raw token exists only in the returned message and is not persisted by this function.
  */
 export function verificationEmail(recipient: string, token: string): IdentityMail {
-  const url = new URL('/auth/verify-email', appUrl)
+  const url = new URL('/auth/verification-email', webUrl)
   url.searchParams.set('token', token)
 
   return {

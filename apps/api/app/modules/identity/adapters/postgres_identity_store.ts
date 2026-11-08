@@ -31,30 +31,36 @@ export const postgresIdentityStore: IdentityStore = {
 
   /** {a normalized email and a framework-hashed password are supplied} => {creates one account or returns null on a duplicate email} */
   async createUser(email, passwordHash, now) {
-    try {
-      const rows = await db
-        .table('identity_users')
-        .insert({
-          id: randomUUID(),
-          email,
-          password_hash: passwordHash,
-          created_at: now,
-          updated_at: now,
-        })
-        .returning(['id', 'email', 'email_verified_at', 'auth_version'])
-      const row = rows[0] as UserRow | undefined
-      return row ? identityUser(row) : null
-    } catch (error) {
-      if (isUniqueViolation(error)) return null
-      throw error
-    }
+    // `ON CONFLICT DO NOTHING` is deliberately preferred to catching a unique
+    // violation: PostgreSQL's error detail includes the conflicting e-mail and
+    // would otherwise reach the database logger during concurrent registration.
+    const rows = await db
+      .table('identity_users')
+      .insert({
+        id: randomUUID(),
+        email,
+        password_hash: passwordHash,
+        created_at: now,
+        updated_at: now,
+      })
+      .onConflict('email')
+      .ignore()
+      .returning(['id', 'email', 'email_verified_at', 'auth_version'])
+    const row = rows[0] as UserRow | undefined
+    return row ? identityUser(row) : null
   },
 
-  /** {email and plain password are supplied} => {returns the identity only if the stored hash verifies, otherwise null} */
+  /** {email and plain password are supplied} => {returns the identity only if the stored hash verifies, otherwise null after comparable password-work} */
   async authenticate(email, password) {
     const row = (await db.from('identity_users').where('email', email).first()) as
       UserRow | undefined
-    if (!row?.password_hash || !(await hash.verify(row.password_hash, password))) return null
+    if (!row?.password_hash) {
+      // Keep an unknown address on the expensive password-hashing path as well.
+      // The result is discarded and neither password nor address is logged.
+      await hash.make(password)
+      return null
+    }
+    if (!(await hash.verify(row.password_hash, password))) return null
     return identityUser(row)
   },
 
@@ -126,8 +132,4 @@ export const postgresIdentityStore: IdentityStore = {
       return true
     })
   },
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
 }

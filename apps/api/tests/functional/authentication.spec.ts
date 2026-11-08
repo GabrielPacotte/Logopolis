@@ -172,12 +172,11 @@ test.group('email and password authentication', (group) => {
   }) => {
     await register(client, 'reset@example.test')
     const user = await db.from('identity_users').where('email', 'reset@example.test').first()
-    await db.table('identity_sessions').insert({
-      id: 'session-to-invalidate',
-      user_id: user.id,
-      data: '{}',
-      expires_at: new Date(Date.now() + 60_000),
-    })
+    const login = await client
+      .post('/auth/login')
+      .withCsrfToken()
+      .json({ email: 'reset@example.test', password: testPassphrase })
+    login.assertStatus(200)
     clearTestOutbox()
     const requested = await client
       .post('/auth/password-reset')
@@ -191,6 +190,8 @@ test.group('email and password authentication', (group) => {
       .json({ token, password: replacementPassphrase })
     reset.assertStatus(204)
     assert.notExists(await db.from('identity_sessions').where('user_id', user.id).first())
+    const invalidatedSession = await client.get('/auth/me').withSession(login.session())
+    invalidatedSession.assertStatus(401)
     const replay = await client
       .post('/auth/password-reset/confirm')
       .withCsrfToken()
@@ -206,6 +207,44 @@ test.group('email and password authentication', (group) => {
       .withCsrfToken()
       .json({ email: 'reset@example.test', password: replacementPassphrase })
     newLogin.assertStatus(200)
+  })
+
+  test('allows exactly one concurrent password reset and rejects expired reset links', async ({
+    client,
+    assert,
+  }) => {
+    await register(client, 'concurrent-reset@example.test')
+    clearTestOutbox()
+    await client
+      .post('/auth/password-reset')
+      .withCsrfToken()
+      .json({ email: 'concurrent-reset@example.test' })
+      .then((response) => response.assertStatus(202))
+    const token = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    const [one, two] = await Promise.all(
+      [testPassphrase, replacementPassphrase].map((password) =>
+        client.post('/auth/password-reset/confirm').withCsrfToken().json({ token, password })
+      )
+    )
+    assert.sameMembers([one.status(), two.status()], [204, 422])
+
+    await register(client, 'expired-reset@example.test')
+    clearTestOutbox()
+    await client
+      .post('/auth/password-reset')
+      .withCsrfToken()
+      .json({ email: 'expired-reset@example.test' })
+      .then((response) => response.assertStatus(202))
+    const expired = tokenFromLastEmail(getTestOutbox().at(-1)!)
+    await db
+      .from('identity_tokens')
+      .where('secret_hash', createHash('sha256').update(expired).digest('hex'))
+      .update({ expires_at: new Date(Date.now() - 60_000) })
+    const expiredResponse = await client
+      .post('/auth/password-reset/confirm')
+      .withCsrfToken()
+      .json({ token: expired, password: replacementPassphrase })
+    expiredResponse.assertStatus(422)
   })
 
   test('enforces PostgreSQL quotas atomically for registration and confirmation', async ({
@@ -228,6 +267,7 @@ test.group('email and password authentication', (group) => {
       attempts.filter((response) => response.status() === 429),
       1
     )
+    assert.lengthOf(await db.from('identity_users').where('email', 'quota@example.test'), 1)
 
     const confirmations = await Promise.all(
       Array.from({ length: 6 }, () =>

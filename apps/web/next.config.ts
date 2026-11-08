@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/auth/password-reset/confirm",
+        source: "/auth/:path*",
         headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
       },
     ];
