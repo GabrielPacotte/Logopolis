@@ -1,7 +1,8 @@
 import app from '@adonisjs/core/services/app'
-import { appUrl } from '#config/app'
+import { appUrl, webUrl } from '#config/app'
 import env from '#start/env'
 import { Resend } from 'resend'
+import type { IdentityMailer as IdentityMailerPort } from '../application/ports.js'
 
 export type IdentityMail = {
   recipient: string
@@ -81,7 +82,7 @@ export function verificationEmail(recipient: string, token: string): IdentityMai
  * Invariants: the raw token exists only in the returned message and is not persisted by this function.
  */
 export function passwordResetEmail(recipient: string, token: string): IdentityMail {
-  const url = new URL('/auth/password-reset/confirm', appUrl)
+  const url = new URL('/auth/password-reset/confirm', webUrl)
   url.searchParams.set('token', token)
 
   return {
@@ -89,4 +90,17 @@ export function passwordResetEmail(recipient: string, token: string): IdentityMa
     subject: 'Réinitialisez votre mot de passe Logopolis',
     text: `Choisissez un nouveau mot de passe : ${url.toString()}`,
   }
+}
+
+/**
+ * {the application requests a transactional identity message} => {delegates delivery without exposing Resend or URL construction to a use case}
+ *
+ * Effects: sends or captures exactly one message.
+ * Invariants: raw tokens are only present in the outgoing message body.
+ */
+export const identityMailer: IdentityMailerPort = {
+  sendVerification: async (recipient, token) =>
+    deliverIdentityMail(verificationEmail(recipient, token)),
+  sendPasswordReset: async (recipient, token) =>
+    deliverIdentityMail(passwordResetEmail(recipient, token)),
 }

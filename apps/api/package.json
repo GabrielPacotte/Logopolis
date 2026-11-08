@@ -16,8 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test:integration": "DB_PORT=${DB_PORT:-5433} node ace test functional",
-    "test:integration:unready": "EXPECT_DATABASE_READY=false DB_PORT=1 node ace test functional --files tests/functional/health.spec.ts",
+    "test:integration": "WEB_ORIGIN=${WEB_ORIGIN:-http://localhost:3000} MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-no-reply@logopolis.test} MAIL_FROM_NAME=${MAIL_FROM_NAME:-Logopolis} DB_PORT=${DB_PORT:-5433} node ace test functional",
+    "test:integration:unready": "WEB_ORIGIN=${WEB_ORIGIN:-http://localhost:3000} MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-no-reply@logopolis.test} MAIL_FROM_NAME=${MAIL_FROM_NAME:-Logopolis} EXPECT_DATABASE_READY=false DB_PORT=1 node ace test functional --files tests/functional/health.spec.ts",
     "migration:run": "node ace migration:run"
   },
   "imports": {

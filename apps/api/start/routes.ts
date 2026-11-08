@@ -25,6 +25,7 @@ router.get('/health/ready', async ({ response }) => {
 
 router.post('/auth/register', [AuthController, 'register']).use(middleware.shield())
 router.get('/auth/verify-email', [AuthController, 'verifyEmail'])
+router.get('/auth/csrf', [AuthController, 'csrf']).use(middleware.shield())
 router
   .post('/auth/verification-email', [AuthController, 'resendVerification'])
   .use(middleware.shield())

@@ -1,24 +1,13 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import type { SessionGuard, SessionLucidUserProvider } from '@adonisjs/auth/session'
 import vine from '@vinejs/vine'
 import {
   InvalidPasswordError,
   InvalidTokenError,
   RateLimitExceededError,
 } from '../modules/identity/domain/authentication_errors.js'
-import * as authentication from '../modules/identity/application/authentication_service.js'
-import type User from '#models/user'
-
-type WebSessionGuard = SessionGuard<false, SessionLucidUserProvider<typeof User>>
-
-/**
- * {the Adonis HTTP auth service is configured with the `web` session guard} => {returns the concrete session guard used for login and logout}
- *
- * Invariants: the cast is local to the framework boundary; application authorization remains server-side.
- */
-function webSessionGuard(auth: HttpContext['auth']): WebSessionGuard {
-  return auth.use('web' as never) as unknown as WebSessionGuard
-}
+import authentication from '#services/identity_authentication_service'
+import { adonisIdentitySession } from '../modules/identity/adapters/adonis_identity_session.js'
+import type { IdentityUser } from '../modules/identity/application/ports.js'
 
 const credentialsValidator = vine.compile(
   vine.object({ email: vine.string().trim().email({}), password: vine.string() })
@@ -29,7 +18,7 @@ const resetValidator = vine.compile(
   vine.object({ token: vine.string().trim().minLength(20), password: vine.string() })
 )
 
-function userResponse(user: User) {
+function userResponse(user: IdentityUser) {
   return { id: user.id, email: user.email, emailVerified: Boolean(user.emailVerifiedAt) }
 }
 
@@ -44,6 +33,11 @@ function handleIdentityError(error: unknown, response: HttpContext['response']) 
 }
 
 export default class AuthController {
+  /** {a browser requests a CSRF bootstrap} => {returns no content while Shield sets the XSRF cookie} */
+  async csrf({ response }: HttpContext) {
+    return response.noContent()
+  }
+
   /** {valid registration data is supplied} => {returns a neutral accepted response after attempting registration} */
   async register({ request, response }: HttpContext) {
     try {
@@ -85,11 +79,12 @@ export default class AuthController {
   async login({ request, response, auth, session }: HttpContext) {
     try {
       const payload = await request.validateUsing(credentialsValidator)
-      const user = await authentication.authenticate(payload.email, payload.password)
+      const user = await authentication.login(
+        payload.email,
+        payload.password,
+        adonisIdentitySession({ auth, session })
+      )
       if (!user) return response.unauthorized({ message: 'Invalid email or password.' })
-      await webSessionGuard(auth).login(user)
-      session.put('identity.authVersion', user.authVersion)
-      await session.tag(user.id)
       return response.ok({ user: userResponse(user) })
     } catch (error) {
       return handleIdentityError(error, response)
@@ -98,8 +93,7 @@ export default class AuthController {
 
   /** {a valid authenticated session exists} => {invalidates it and returns no private content} */
   async logout({ response, auth, session }: HttpContext) {
-    await session.untag(webSessionGuard(auth).user!.id)
-    await webSessionGuard(auth).logout()
+    await authentication.logout(adonisIdentitySession({ auth, session }))
     return response.noContent()
   }
 

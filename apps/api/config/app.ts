@@ -8,6 +8,7 @@ import { defineConfig } from '@adonisjs/core/http'
  * use absolute URLs.
  */
 export const appUrl = env.get('APP_URL')
+export const webUrl = env.get('WEB_ORIGIN')
 
 /**
  * The configuration settings used by the HTTP server
