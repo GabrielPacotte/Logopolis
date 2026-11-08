@@ -25,10 +25,15 @@ function tokenFromLastEmail(message: IdentityMail): string {
  * Invariants: callers never infer delivery from the HTTP response alone because production delivery is deliberately deferred.
  */
 async function waitForOutboxLength(expected: number): Promise<readonly IdentityMail[]> {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  const deadline = Date.now() + 2_000
+  while (Date.now() < deadline) {
     const outbox = getTestOutbox()
     if (outbox.length >= expected) return outbox
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    // The production service deliberately schedules token issuance after the
+    // neutral HTTP response.  Wait for the observable delivery condition,
+    // rather than assuming a fixed number of event-loop turns is enough on a
+    // loaded CI runner.
+    await new Promise((resolve) => setTimeout(resolve, 10))
   }
   throw new Error(`Expected at least ${expected} message(s) in the test outbox`)
 }
