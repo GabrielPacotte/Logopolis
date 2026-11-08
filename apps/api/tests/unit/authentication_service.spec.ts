@@ -69,6 +69,7 @@ test.group('authentication application service', () => {
     const service = createAuthenticationService(fixture.dependencies)
 
     await service.register(' Reader@Example.Test ', 'a-safe-password')
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
 
     assert.deepEqual(created, {
       email: 'reader@example.test',
@@ -77,6 +78,27 @@ test.group('authentication application service', () => {
     assert.deepEqual(fixture.sent, [
       { recipient: 'reader@example.test', token: 'raw-test-token', purpose: 'verify' },
     ])
+  })
+
+  test('returns before e-mail token issuance so account existence does not control public delivery latency', async ({
+    assert,
+  }) => {
+    let releaseToken: (() => void) | undefined
+    const fixture = dependencies({
+      store: {
+        ...dependencies().dependencies.store,
+        findByEmail: async () => user,
+        issueToken: async () => new Promise<void>((resolve) => (releaseToken = resolve)),
+      },
+    })
+    const service = createAuthenticationService(fixture.dependencies)
+
+    await service.resendVerification('reader@example.test')
+
+    assert.isDefined(releaseToken)
+    assert.isEmpty(fixture.sent)
+    releaseToken?.()
+    await new Promise<void>((resolve) => queueMicrotask(resolve))
   })
 
   test('keeps a duplicate registration silent and does not issue another token', async ({

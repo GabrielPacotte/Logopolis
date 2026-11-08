@@ -86,6 +86,19 @@ export function createAuthenticationService({
     await hasher.hash(tokens.create())
   }
 
+  /**
+   * {task issues an e-mail token and sends a message only for an already-authorized identity} => {returns before token persistence or mail I/O, with failures contained}
+   *
+   * Effects: schedules the task after the public response path; the task may persist a token and invoke the mail adapter.
+   * Refus: delivery failures do not alter the neutral HTTP outcome and must not leak recipient data through this use case.
+   * Invariants: this deferred work never exposes a token or account-existence result to the caller.
+   */
+  function deferEmailTask(task: () => Promise<void>): void {
+    queueMicrotask(() => {
+      void task().catch(() => undefined)
+    })
+  }
+
   return {
     /**
      * {email is syntactically valid and password is submitted by an anonymous visitor} => {creates at most one unverified account and prepares a verification email}
@@ -106,7 +119,9 @@ export function createAuthenticationService({
         await performNeutralIdentityWork()
         return
       }
-      await mailer.sendVerification(user.email, await issueToken(user, 'verify_email'))
+      deferEmailTask(async () =>
+        mailer.sendVerification(user.email, await issueToken(user, 'verify_email'))
+      )
     },
 
     /**
@@ -144,7 +159,9 @@ export function createAuthenticationService({
         await performNeutralIdentityWork()
         return
       }
-      await mailer.sendVerification(user.email, await issueToken(user, 'verify_email'))
+      deferEmailTask(async () =>
+        mailer.sendVerification(user.email, await issueToken(user, 'verify_email'))
+      )
     },
 
     /**
@@ -194,7 +211,9 @@ export function createAuthenticationService({
         await performNeutralIdentityWork()
         return
       }
-      await mailer.sendPasswordReset(user.email, await issueToken(user, 'password_reset'))
+      deferEmailTask(async () =>
+        mailer.sendPasswordReset(user.email, await issueToken(user, 'password_reset'))
+      )
     },
 
     /**

@@ -83,6 +83,10 @@ jobs:
           MAIL_FROM_ADDRESS: no-reply@logopolis.test
           MAIL_FROM_NAME: Logopolis CI
         run: npm run test:integration:unready
+      - name: Build Web application
+        run: npm run build --workspace=web
+      - name: Build API application
+        run: npm run build --workspace=api
       - name: Documentation links
         run: npm run check:docs
       - name: Agent governance
