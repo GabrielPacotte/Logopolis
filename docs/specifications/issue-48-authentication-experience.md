@@ -59,6 +59,7 @@ La demande de récupération et sa confirmation restent neutres quant à l’exi
 ### Espace personnel minimal
 
 Une session authentifiée donne accès à une page contenant :
+
 - l’adresse e-mail de la session ;
 - un statut de vérification compréhensible ;
 - un message d’accueil ;
@@ -73,6 +74,7 @@ Les champs ont un label visible, une aide si nécessaire, un état invalide sém
 Les informations de réussite, d’erreur et de chargement utilisent une sémantique annoncée aux technologies d’assistance. Tous les parcours sont utilisables au clavier, présentent un indicateur de focus visible et gardent des contrastes conformes au niveau AA de WCAG 2.2.
 
 Les messages explicites sont autorisés pour :
+
 - format e-mail invalide ;
 - mot de passe ne respectant pas la politique ;
 - confirmation de mot de passe différente ;
@@ -86,6 +88,7 @@ Ils restent neutres pour toute réponse qui identifierait ou confirmerait un com
 ### Direction retenue
 
 Logopolis adopte une identité **éditoriale classique**, inspirée de la proposition A :
+
 - fond ivoire évoquant le papier ;
 - encre sombre pour le contenu principal ;
 - accents terre cuite limités aux repères et actions importantes ;
@@ -119,6 +122,7 @@ Cette fondation n’est ni une bibliothèque de composants exhaustive, ni la dir
 ## 8. Vérification attendue
 
 Le Developer fournit :
+
 - des tests unitaires et de composants pour erreurs, messages, états et visibilité contextuelle des actions ;
 - des tests fonctionnels préservant les protections de #17 ;
 - des E2E Playwright pour les deux parcours complets avec Mailpit contrôlé ;
