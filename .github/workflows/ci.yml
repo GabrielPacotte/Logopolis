@@ -94,12 +94,11 @@ jobs:
         run: npm run build --workspace=api
       - name: Start local services for browser E2E
         env:
-          NODE_ENV: development
           MAILPIT_HOST: 127.0.0.1
           MAILPIT_PORT: 1025
         run: |
-          (cd apps/api && node build/bin/server.js > /tmp/logopolis-api-e2e.log 2>&1 &)
-          (npm run start --workspace=web > /tmp/logopolis-web-e2e.log 2>&1 &)
+          (cd apps/api && NODE_ENV=development node build/bin/server.js > /tmp/logopolis-api-e2e.log 2>&1 &)
+          (NODE_ENV=production PORT=3000 npm run start --workspace=web > /tmp/logopolis-web-e2e.log 2>&1 &)
           for attempt in {1..30}; do
             if curl --fail --silent http://localhost:3333/health/live >/dev/null && curl --fail --silent http://localhost:3000 >/dev/null; then exit 0; fi
             sleep 1
