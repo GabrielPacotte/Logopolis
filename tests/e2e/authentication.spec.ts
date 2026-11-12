@@ -100,6 +100,9 @@ test.describe("authentication journey with local Mailpit", () => {
       .fill("a-safe-password");
     await page.getByLabel("Confirmer le mot de passe").fill("a-safe-password");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Vérifiez votre adresse e-mail" }),
+    ).toBeVisible();
     await page.goto("/auth/password-reset");
     await page.getByLabel("Adresse e-mail").fill(email);
     await page.getByRole("button", { name: "Demander un lien" }).click();
