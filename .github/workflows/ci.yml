@@ -13,6 +13,22 @@ jobs:
     name: Quality and security baseline
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      NODE_ENV: test
+      PORT: 3333
+      HOST: 127.0.0.1
+      LOG_LEVEL: error
+      APP_NAME: Logopolis CI
+      APP_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      APP_URL: http://localhost:3333
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USER: logopolis
+      DB_PASSWORD: logopolis
+      DB_DATABASE: logopolis
+      WEB_ORIGIN: http://localhost:3000
+      MAIL_FROM_ADDRESS: no-reply@logopolis.test
+      MAIL_FROM_NAME: Logopolis CI
     services:
       postgres:
         image: postgres:16-alpine
@@ -43,14 +59,34 @@ jobs:
         run: npm run lint
       - name: Type checking
         run: npm run typecheck
-      - name: Unit tests
+      - name: Foundation unit tests
         run: npm test
+      - name: API unit tests
+        run: npm run test:unit --workspace=api
+      - name: Apply API migrations
+        env:
+          DB_PORT: 5432
+          WEB_ORIGIN: http://localhost:3000
+          MAIL_FROM_ADDRESS: no-reply@logopolis.test
+          MAIL_FROM_NAME: Logopolis CI
+        run: npm run migration:run --workspace=api
       - name: API integration tests with PostgreSQL
         env:
           DB_PORT: 5432
+          WEB_ORIGIN: http://localhost:3000
+          MAIL_FROM_ADDRESS: no-reply@logopolis.test
+          MAIL_FROM_NAME: Logopolis CI
         run: npm run test:integration
       - name: API integration tests without PostgreSQL
+        env:
+          WEB_ORIGIN: http://localhost:3000
+          MAIL_FROM_ADDRESS: no-reply@logopolis.test
+          MAIL_FROM_NAME: Logopolis CI
         run: npm run test:integration:unready
+      - name: Build Web application
+        run: npm run build --workspace=web
+      - name: Build API application
+        run: npm run build --workspace=api
       - name: Documentation links
         run: npm run check:docs
       - name: Agent governance

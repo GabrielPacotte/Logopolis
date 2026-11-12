@@ -42,6 +42,91 @@ a {
   text-decoration: none;
 }
 
+.auth-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  align-content: center;
+  gap: 1.5rem;
+  padding: 2rem 1rem;
+}
+
+.auth-brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.auth-card {
+  display: grid;
+  width: min(100%, 32rem);
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 0.75rem;
+}
+
+.auth-card form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.auth-card input,
+.auth-card button {
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.35rem;
+  font: inherit;
+}
+
+.auth-card button {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.auth-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.auth-card input:focus-visible,
+.auth-card button:focus-visible,
+.auth-card a:focus-visible {
+  outline: 3px solid #1d70b8;
+  outline-offset: 2px;
+}
+
+.auth-help {
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  font-size: 0.9rem;
+}
+
+.auth-success,
+.auth-error {
+  padding: 0.75rem;
+  border-inline-start: 0.3rem solid currentColor;
+}
+
+.auth-success {
+  background: #dff5e5;
+  color: #145a32;
+}
+
+.auth-error {
+  background: #fbe2e2;
+  color: #8a1c1c;
+}
+
+.auth-links {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.auth-links a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

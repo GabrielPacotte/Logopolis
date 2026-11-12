@@ -22,6 +22,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   // App
   APP_KEY: Env.schema.secret(),
   APP_URL: Env.schema.string({ format: 'url', tld: false }),
+  WEB_ORIGIN: Env.schema.string({ format: 'url', tld: false }),
+
+  MAIL_FROM_ADDRESS: Env.schema.string({ format: 'email' }),
+  MAIL_FROM_NAME: Env.schema.string(),
+  RESEND_API_KEY: Env.schema.string.optional(),
 
   DB_HOST: Env.schema.string({ format: 'host' }),
   DB_PORT: Env.schema.number(),

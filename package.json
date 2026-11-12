@@ -16,7 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . && node scripts/check-architecture.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run typecheck --workspace=api && npm run typecheck --workspace=web",
     "test": "vitest run",
     "check:docs": "node scripts/check-docs.mjs",
     "check:agent-governance": "node scripts/check-agent-governance.mjs",

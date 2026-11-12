@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 const root = process.cwd();
 const ignoredDirectories = new Set([
   ".git",
+  ".next",
   "node_modules",
   "coverage",
   "dist",

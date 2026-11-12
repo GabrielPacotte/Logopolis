@@ -21,16 +21,25 @@ import server from '@adonisjs/core/services/server'
  * requests, even if there is no route registered for
  * the request URL.
  */
-server.use([() => import('@adonisjs/cors/cors_middleware')])
+server.use([
+  () => import('@adonisjs/cors/cors_middleware'),
+  () => import('@adonisjs/session/session_middleware'),
+])
 
 /**
  * The router middleware stack runs middleware on all the HTTP
  * requests with a registered route.
  */
-router.use([() => import('@adonisjs/core/bodyparser_middleware')])
+router.use([
+  () => import('@adonisjs/core/bodyparser_middleware'),
+  () => import('@adonisjs/auth/initialize_auth_middleware'),
+])
 
 /**
  * Named middleware collection must be explicitly assigned to
  * the routes or the routes group.
  */
-export const middleware = router.named({})
+export const middleware = router.named({
+  auth: () => import('#middleware/auth_middleware'),
+  shield: () => import('@adonisjs/shield/shield_middleware'),
+})
