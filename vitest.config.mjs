@@ -6,6 +6,7 @@ export default defineConfig({
       ...configDefaults.exclude,
       "apps/api/build/**",
       "apps/api/tests/**",
+      "tests/e2e/**",
     ],
   },
 });

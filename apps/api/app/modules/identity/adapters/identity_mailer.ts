@@ -2,6 +2,7 @@ import app from '@adonisjs/core/services/app'
 import { webUrl } from '#config/app'
 import env from '#start/env'
 import { Resend } from 'resend'
+import { Socket } from 'node:net'
 import type { IdentityMailer as IdentityMailerPort } from '../application/ports.js'
 
 export type IdentityMail = {
@@ -40,9 +41,13 @@ export function getTestOutbox(): readonly IdentityMail[] {
  * Invariants: this adapter never writes message content or tokens to application logs.
  */
 export async function deliverIdentityMail(message: IdentityMail): Promise<void> {
-  if (!app.inProduction) {
+  if (app.inTest) {
     testOutbox.push(message)
     return
+  }
+
+  if (!app.inProduction) {
+    return deliverToMailpit(message)
   }
 
   const apiKey = env.get('RESEND_API_KEY')
@@ -56,6 +61,77 @@ export async function deliverIdentityMail(message: IdentityMail): Promise<void> 
     text: message.text,
   })
   if (result.error) throw new Error('The transactional email provider rejected the message.')
+}
+
+/**
+ * {development Mailpit is reachable on the configured loopback host and port} => {delivers one plain-text identity email without logging its content}
+ *
+ * Errors: rejects when the development SMTP service cannot be reached or refuses a command.
+ * Effects: opens one SMTP connection to Mailpit only outside test and production.
+ * Invariants: production never invokes this adapter; token-bearing text is never logged.
+ */
+async function deliverToMailpit(message: IdentityMail): Promise<void> {
+  const host = env.get('MAILPIT_HOST') ?? '127.0.0.1'
+  const port = env.get('MAILPIT_PORT') ?? 1025
+  const socket = new Socket()
+  const responses: number[] = []
+  let wake: ((code: number) => void) | undefined
+  socket.setEncoding('utf8')
+  socket.on('data', (chunk: string) => {
+    for (const line of chunk.split('\r\n')) {
+      if (!/^\d{3} /.test(line)) continue
+      const code = Number(line.slice(0, 3))
+      if (wake) {
+        const resolve = wake
+        wake = undefined
+        resolve(code)
+      } else responses.push(code)
+    }
+  })
+  const nextResponse = () =>
+    new Promise<number>((resolve, reject) => {
+      const received = responses.shift()
+      if (received !== undefined) {
+        resolve(received)
+        return
+      }
+      const timeout = setTimeout(
+        () => reject(new Error('Local SMTP service did not respond.')),
+        5_000
+      )
+      wake = (code) => {
+        clearTimeout(timeout)
+        resolve(code)
+      }
+      socket.once('error', reject)
+    })
+  const waitFor = async (expected: number) => {
+    const actual = await nextResponse()
+    if (actual !== expected) throw new Error('Local SMTP service rejected the message.')
+  }
+  const command = async (line: string, expected: number) => {
+    socket.write(`${line}\r\n`)
+    await waitFor(expected)
+  }
+  try {
+    const greeting = waitFor(220)
+    await new Promise<void>((resolve, reject) =>
+      socket.connect(port, host, resolve).once('error', reject)
+    )
+    await greeting
+    await command('EHLO logopolis.local', 250)
+    await command(`MAIL FROM:<${env.get('MAIL_FROM_ADDRESS')}>`, 250)
+    await command(`RCPT TO:<${message.recipient}>`, 250)
+    await command('DATA', 354)
+    await command(
+      `From: ${env.get('MAIL_FROM_NAME')} <${env.get('MAIL_FROM_ADDRESS')}>\r\nTo: ${message.recipient}\r\nSubject: ${message.subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${message.text}\r\n.`,
+      250
+    )
+    socket.end('QUIT\r\n')
+  } catch {
+    socket.destroy()
+    throw new Error('The local development mail service is unavailable.')
+  }
 }
 
 /**

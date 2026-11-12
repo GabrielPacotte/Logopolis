@@ -18,10 +18,14 @@ function VerificationContent() {
     );
   }
   return (
-    <AuthLayout title="Renvoyer la vérification">
+    <AuthLayout title="Vérifiez votre adresse e-mail">
       <p>
-        Si un compte non vérifié correspond à cette adresse, un nouveau lien
-        sera préparé.
+        Ouvrez le message reçu après votre inscription pour confirmer votre
+        adresse.
+      </p>
+      <p className="auth-help">
+        Vous ne trouvez pas le message ? Vérifiez vos courriers indésirables,
+        puis demandez un nouveau lien.
       </p>
       <EmailActionForm action="resend" />
       <p className="auth-links">

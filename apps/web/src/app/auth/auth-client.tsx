@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
 const csrfCookieName = "XSRF-TOKEN";
-
 type RequestOptions = {
   method?: "GET" | "POST";
   body?: Record<string, string>;
@@ -15,12 +15,12 @@ type ApiResult = {
   message: string;
   user?: { email: string; emailVerified: boolean };
 };
+type FieldErrors = Record<string, string>;
 
-/**
- * {a browser submits an authentication request} => {sends cookies and a CSRF token for mutations, without exposing a response body in the UI}
- *
- * Effects: initializes the API anti-CSRF cookie before a state-changing request.
- * Invariants: tokens in query strings are never written to the page or browser console.
+/** {a browser makes an authentication request} => {sends credentials with CSRF protection and returns only safe display data}
+ * Errors: converts network and public API errors into an actionable message without exposing internals.
+ * Effects: initializes Shield's CSRF cookie before mutations.
+ * Invariants: query-string tokens and response payloads are never logged or rendered verbatim.
  */
 async function requestAuthentication(
   path: string,
@@ -52,7 +52,7 @@ async function requestAuthentication(
     try {
       payload = (await response.json()) as typeof payload;
     } catch {
-      // Successful auth endpoints intentionally have no response body.
+      /* no-content is expected */
     }
     return {
       ok: response.ok,
@@ -60,7 +60,7 @@ async function requestAuthentication(
         payload.message ??
         (response.ok
           ? "La demande a été prise en compte."
-          : "La demande a été refusée. Vérifiez les informations saisies et réessayez."),
+          : "La demande n’a pas pu être traitée. Réessayez dans quelques instants."),
       user: payload.user,
     };
   } catch {
@@ -71,19 +71,42 @@ async function requestAuthentication(
   }
 }
 
+function validationErrors(
+  email: string,
+  password?: string,
+  confirmation?: string,
+): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!email.trim()) errors.email = "Indiquez votre adresse e-mail.";
+  else if (!/^\S+@\S+\.\S+$/.test(email))
+    errors.email = "Indiquez une adresse e-mail valide.";
+  if (password !== undefined && (password.length < 12 || password.length > 128))
+    errors["password"] =
+      "Le mot de passe doit compter entre 12 et 128 caractères.";
+  if (confirmation !== undefined && password !== confirmation)
+    errors.confirmation = "Les deux mots de passe sont différents.";
+  return errors;
+}
+
 export function AuthLayout({
   children,
   title,
+  eyebrow = "Authentification",
 }: {
   children: ReactNode;
   title: string;
+  eyebrow?: string;
 }) {
   return (
     <main className="auth-page">
-      <Link href="/" className="auth-brand">
-        Logopolis
-      </Link>
+      <header className="auth-header">
+        <Link href="/" className="auth-brand">
+          Logopolis
+        </Link>
+        <span aria-hidden="true" className="auth-rule" />
+      </header>
       <section className="auth-card" aria-labelledby="auth-title">
+        <p className="auth-eyebrow">{eyebrow}</p>
         <h1 id="auth-title">{title}</h1>
         {children}
       </section>
@@ -91,39 +114,71 @@ export function AuthLayout({
   );
 }
 
-function FormMessage({ message, error }: { message?: string; error: boolean }) {
-  if (!message) return null;
-  return (
+function FormMessage({
+  message,
+  error,
+}: {
+  message?: string;
+  error?: boolean;
+}) {
+  return message ? (
     <p
       role={error ? "alert" : "status"}
+      aria-live="polite"
       className={error ? "auth-error" : "auth-success"}
     >
       {message}
     </p>
-  );
+  ) : null;
+}
+function FieldError({ id, children }: { id: string; children?: string }) {
+  return children ? (
+    <p id={id} className="field-error">
+      {children}
+    </p>
+  ) : null;
 }
 
 export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
+  const router = useRouter();
   const [message, setMessage] = useState<string>();
   const [failed, setFailed] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const isRegister = mode === "register";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    const confirmation = String(form.get("confirmation") ?? "");
+    const nextErrors = validationErrors(
+      email,
+      password,
+      isRegister ? confirmation : undefined,
+    );
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) {
+      setFailed(true);
+      setMessage("Corrigez les champs signalés avant de continuer.");
+      return;
+    }
     const result = await requestAuthentication(
       isRegister ? "/auth/register" : "/auth/login",
-      {
-        body: {
-          email: String(form.get("email") ?? ""),
-          password: String(form.get("password") ?? ""),
-        },
-      },
+      { body: { email, password } },
     );
-    setFailed(!result.ok);
+    if (result.ok && isRegister) {
+      router.push("/auth/verification-email?pending=1");
+      return;
+    }
+    if (result.ok) {
+      router.push("/account");
+      return;
+    }
+    setFailed(true);
     setMessage(
-      result.ok && !isRegister
-        ? `Connexion établie pour ${result.user?.email ?? "votre compte"}.`
-        : result.message,
+      isRegister
+        ? "L’inscription n’a pas pu être finalisée. Vérifiez les informations saisies puis réessayez."
+        : "La connexion a échoué. Vérifiez vos identifiants puis réessayez.",
     );
   }
   return (
@@ -134,8 +189,11 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
         name="email"
         type="email"
         autoComplete="email"
+        aria-invalid={Boolean(errors.email)}
+        aria-describedby={errors.email ? `${mode}-email-error` : undefined}
         required
       />
+      <FieldError id={`${mode}-email-error`}>{errors.email}</FieldError>
       <label htmlFor={`${mode}-password`}>Mot de passe</label>
       <input
         id={`${mode}-password`}
@@ -143,9 +201,42 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
         type="password"
         autoComplete={isRegister ? "new-password" : "current-password"}
         minLength={isRegister ? 12 : undefined}
+        maxLength={128}
+        aria-invalid={Boolean(errors.password)}
+        aria-describedby={
+          errors.password
+            ? `${mode}-password-error`
+            : isRegister
+              ? "password-help"
+              : undefined
+        }
         required
       />
-      {isRegister ? <p className="auth-help">12 à 128 caractères.</p> : null}
+      <FieldError id={`${mode}-password-error`}>{errors.password}</FieldError>
+      {isRegister ? (
+        <>
+          <p id="password-help" className="auth-help">
+            12 à 128 caractères.
+          </p>
+          <label htmlFor="register-confirmation">
+            Confirmer le mot de passe
+          </label>
+          <input
+            id="register-confirmation"
+            name="confirmation"
+            type="password"
+            autoComplete="new-password"
+            aria-invalid={Boolean(errors.confirmation)}
+            aria-describedby={
+              errors.confirmation ? "register-confirmation-error" : undefined
+            }
+            required
+          />
+          <FieldError id="register-confirmation-error">
+            {errors.confirmation}
+          </FieldError>
+        </>
+      ) : null}
       <button type="submit">
         {isRegister ? "Créer mon compte" : "Se connecter"}
       </button>
@@ -156,17 +247,23 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
 
 export function EmailActionForm({ action }: { action: "resend" | "recovery" }) {
   const [message, setMessage] = useState<string>();
-  const [failed, setFailed] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const resend = action === "resend";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const email = String(new FormData(event.currentTarget).get("email") ?? "");
+    const nextErrors = validationErrors(email);
+    setErrors(nextErrors);
+    if (nextErrors.email) return;
     const result = await requestAuthentication(
       resend ? "/auth/verification-email" : "/auth/password-reset",
-      { body: { email: String(form.get("email") ?? "") } },
+      { body: { email } },
     );
-    setFailed(!result.ok);
-    setMessage(result.message);
+    setMessage(
+      result.ok
+        ? "Si cette adresse peut recevoir ce message, les prochaines étapes vous ont été indiquées."
+        : "La demande n’a pas pu être traitée. Réessayez dans quelques instants.",
+    );
   }
   return (
     <form onSubmit={submit} noValidate>
@@ -176,17 +273,21 @@ export function EmailActionForm({ action }: { action: "resend" | "recovery" }) {
         name="email"
         type="email"
         autoComplete="email"
+        aria-invalid={Boolean(errors.email)}
+        aria-describedby={errors.email ? `${action}-email-error` : undefined}
         required
       />
+      <FieldError id={`${action}-email-error`}>{errors.email}</FieldError>
       <button type="submit">
-        {resend ? "Renvoyer le lien" : "Demander un lien"}
+        {resend ? "Renvoyer l’e-mail" : "Demander un lien"}
       </button>
-      <FormMessage message={message} error={failed} />
+      <FormMessage message={message} />
     </form>
   );
 }
 
 export function VerificationLink({ token }: { token: string }) {
+  const router = useRouter();
   const [message, setMessage] = useState<string>();
   const [failed, setFailed] = useState(false);
   async function verify() {
@@ -194,11 +295,13 @@ export function VerificationLink({ token }: { token: string }) {
       `/auth/verify-email?token=${encodeURIComponent(token)}`,
       { method: "GET" },
     );
-    setFailed(!result.ok);
+    if (result.ok) {
+      router.replace("/auth?verified=1");
+      return;
+    }
+    setFailed(true);
     setMessage(
-      result.ok
-        ? "Votre adresse e-mail est vérifiée. Vous pouvez maintenant revenir à votre compte."
-        : "Ce lien est invalide, expiré ou a déjà été utilisé. Demandez un nouveau lien.",
+      "Ce lien est invalide, expiré ou a déjà été utilisé. Demandez un nouveau lien.",
     );
   }
   return (
@@ -212,19 +315,32 @@ export function VerificationLink({ token }: { token: string }) {
 }
 
 export function PasswordResetConfirmationForm({ token }: { token: string }) {
+  const router = useRouter();
   const [message, setMessage] = useState<string>();
   const [failed, setFailed] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") ?? "");
+    const confirmation = String(form.get("confirmation") ?? "");
+    const nextErrors = validationErrors(
+      "valid@example.test",
+      password,
+      confirmation,
+    );
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     const result = await requestAuthentication("/auth/password-reset/confirm", {
-      body: { token, password: String(form.get("password") ?? "") },
+      body: { token, password },
     });
-    setFailed(!result.ok);
+    if (result.ok) {
+      router.push("/auth?reset=1");
+      return;
+    }
+    setFailed(true);
     setMessage(
-      result.ok
-        ? "Votre mot de passe a été remplacé. Vous pouvez vous connecter."
-        : "Ce lien est invalide, expiré ou la demande a été refusée.",
+      "Ce lien est invalide, expiré ou a déjà été utilisé. Demandez un nouveau lien.",
     );
   }
   return (
@@ -238,8 +354,26 @@ export function PasswordResetConfirmationForm({ token }: { token: string }) {
         maxLength={128}
         required
         autoComplete="new-password"
+        aria-invalid={Boolean(errors.password)}
+        aria-describedby={errors.password ? "password-error" : "password-help"}
       />
-      <p className="auth-help">12 à 128 caractères.</p>
+      <p id="password-help" className="auth-help">
+        12 à 128 caractères.
+      </p>
+      <FieldError id="password-error">{errors.password}</FieldError>
+      <label htmlFor="confirmation">Confirmer le nouveau mot de passe</label>
+      <input
+        id="confirmation"
+        name="confirmation"
+        type="password"
+        required
+        autoComplete="new-password"
+        aria-invalid={Boolean(errors.confirmation)}
+        aria-describedby={
+          errors.confirmation ? "confirmation-error" : undefined
+        }
+      />
+      <FieldError id="confirmation-error">{errors.confirmation}</FieldError>
       <button type="submit" disabled={!token}>
         Enregistrer le mot de passe
       </button>
@@ -248,28 +382,59 @@ export function PasswordResetConfirmationForm({ token }: { token: string }) {
   );
 }
 
+export function LoginNotice() {
+  const params = useSearchParams();
+  return (
+    <FormMessage
+      message={
+        params.get("verified")
+          ? "Votre adresse e-mail est vérifiée. Connectez-vous pour poursuivre."
+          : params.get("reset")
+            ? "Votre mot de passe a été remplacé. Vous pouvez vous connecter."
+            : undefined
+      }
+    />
+  );
+}
 export function AccountStatus() {
+  const router = useRouter();
+  const [user, setUser] = useState<ApiResult["user"]>();
   const [message, setMessage] = useState("Vérification de votre session…");
-  const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     void requestAuthentication("/auth/me", { method: "GET" }).then((result) => {
-      setSignedIn(result.ok);
-      setMessage(
-        result.ok
-          ? `Connecté·e en tant que ${result.user?.email ?? "utilisateur"}${result.user?.emailVerified ? ". Adresse vérifiée." : ". Adresse non vérifiée."}`
-          : "Aucune session active.",
-      );
+      if (!result.ok) {
+        router.replace("/auth");
+        return;
+      }
+      setUser(result.user);
+      setMessage("Bienvenue dans votre espace personnel.");
     });
-  }, []);
+  }, [router]);
   async function logout() {
     const result = await requestAuthentication("/auth/logout");
-    setSignedIn(false);
-    setMessage(result.ok ? "Vous êtes déconnecté·e." : result.message);
+    if (result.ok) router.replace("/auth");
+    else setMessage(result.message);
   }
   return (
-    <>
-      <p role="status">{message}</p>
-      {signedIn ? <button onClick={logout}>Se déconnecter</button> : null}
-    </>
+    <div className="account-summary">
+      <FormMessage message={message} />
+      {user ? (
+        <>
+          <dl>
+            <div>
+              <dt>Adresse e-mail</dt>
+              <dd>{user.email}</dd>
+            </div>
+            <div>
+              <dt>Statut</dt>
+              <dd>
+                {user.emailVerified ? "Adresse vérifiée" : "Adresse à vérifier"}
+              </dd>
+            </div>
+          </dl>
+          <button onClick={logout}>Se déconnecter</button>
+        </>
+      ) : null}
+    </div>
   );
 }
