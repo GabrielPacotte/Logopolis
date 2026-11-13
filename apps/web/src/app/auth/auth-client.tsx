@@ -71,6 +71,24 @@ async function requestAuthentication(
   }
 }
 
+/**
+ * {PRÉCONDITIONS} => {POSTCONDITIONS}
+ *
+ * Préconditions : `email` est la valeur brute courante du formulaire ;
+ * `password` et `confirmation`, lorsqu’ils sont présents, sont leurs valeurs
+ * brutes courantes. Cette fonction ne doit pas servir à déterminer si un
+ * compte existe.
+ *
+ * Postconditions : renvoie une nouvelle table champ→message ne contenant que
+ * les refus déterministes et sûrs côté client pour les valeurs fournies ; les
+ * champs valides sont absents. Elle ne renvoie ni mot de passe, ni jeton, ni
+ * erreur serveur, ni information sur l’existence d’un compte.
+ *
+ * Erreurs/refus : aucune exception n’est levée pour une saisie, même vide.
+ * Effets/invariants : aucun effet de bord ; préserve l’invariant
+ * d’anti-énumération en ne validant que la syntaxe et la politique de mot de
+ * passe.
+ */
 function validationErrors(
   email: string,
   password?: string,
