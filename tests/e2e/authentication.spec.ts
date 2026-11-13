@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 const mailpitUrl = process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:8025";
@@ -94,6 +95,10 @@ test.describe("authentication journey with local Mailpit", () => {
     await expect(
       page.getByText("Indiquez une adresse e-mail valide."),
     ).toBeVisible();
+    await expect(page.getByLabel("Adresse e-mail")).toBeFocused();
+    await expect(
+      page.getByText("Indiquez une adresse e-mail valide."),
+    ).toHaveAttribute("id", "register-email-error");
     await page.getByLabel("Adresse e-mail").fill(email);
     await page
       .getByLabel("Mot de passe", { exact: true })
@@ -104,6 +109,14 @@ test.describe("authentication journey with local Mailpit", () => {
       page.getByRole("heading", { name: "Vérifiez votre adresse e-mail" }),
     ).toBeVisible();
     await page.goto("/auth/password-reset");
+    await page.getByLabel("Adresse e-mail").fill("not-an-email");
+    await page.getByRole("button", { name: "Demander un lien" }).click();
+    const recoveryValidationMessage = page.getByText(
+      "Corrigez l’adresse e-mail signalée avant de continuer.",
+    );
+    await expect(recoveryValidationMessage).toBeVisible();
+    await expect(recoveryValidationMessage).toHaveAttribute("role", "alert");
+    await expect(page.getByLabel("Adresse e-mail")).toBeFocused();
     await page.getByLabel("Adresse e-mail").fill(email);
     await page.getByRole("button", { name: "Demander un lien" }).click();
     await expect(
@@ -129,5 +142,23 @@ test.describe("authentication journey with local Mailpit", () => {
         "Votre mot de passe a été remplacé. Vous pouvez vous connecter.",
       ),
     ).toBeVisible();
+  });
+
+  test("has no automated accessibility violations on authentication forms", async ({
+    page,
+  }) => {
+    await page.goto("/auth/register");
+    await expect(
+      new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze(),
+    ).resolves.toMatchObject({ violations: [] });
+
+    await page.goto("/auth/password-reset");
+    await expect(
+      new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze(),
+    ).resolves.toMatchObject({ violations: [] });
   });
 });

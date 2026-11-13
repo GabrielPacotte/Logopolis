@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
 const csrfCookieName = "XSRF-TOKEN";
@@ -124,7 +124,7 @@ function FormMessage({
   return message ? (
     <p
       role={error ? "alert" : "status"}
-      aria-live="polite"
+      aria-live={error ? "assertive" : "polite"}
       className={error ? "auth-error" : "auth-success"}
     >
       {message}
@@ -144,6 +144,9 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
   const [message, setMessage] = useState<string>();
   const [failed, setFailed] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmationRef = useRef<HTMLInputElement>(null);
   const isRegister = mode === "register";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,6 +163,9 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
     if (Object.keys(nextErrors).length) {
       setFailed(true);
       setMessage("Corrigez les champs signalés avant de continuer.");
+      if (nextErrors.email) emailRef.current?.focus();
+      else if (nextErrors.password) passwordRef.current?.focus();
+      else confirmationRef.current?.focus();
       return;
     }
     const result = await requestAuthentication(
@@ -192,6 +198,7 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
         aria-invalid={Boolean(errors.email)}
         aria-describedby={errors.email ? `${mode}-email-error` : undefined}
         required
+        ref={emailRef}
       />
       <FieldError id={`${mode}-email-error`}>{errors.email}</FieldError>
       <label htmlFor={`${mode}-password`}>Mot de passe</label>
@@ -211,6 +218,7 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
               : undefined
         }
         required
+        ref={passwordRef}
       />
       <FieldError id={`${mode}-password-error`}>{errors.password}</FieldError>
       {isRegister ? (
@@ -231,6 +239,7 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
               errors.confirmation ? "register-confirmation-error" : undefined
             }
             required
+            ref={confirmationRef}
           />
           <FieldError id="register-confirmation-error">
             {errors.confirmation}
@@ -247,18 +256,26 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
 
 export function EmailActionForm({ action }: { action: "resend" | "recovery" }) {
   const [message, setMessage] = useState<string>();
+  const [failed, setFailed] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const emailRef = useRef<HTMLInputElement>(null);
   const resend = action === "resend";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const email = String(new FormData(event.currentTarget).get("email") ?? "");
     const nextErrors = validationErrors(email);
     setErrors(nextErrors);
-    if (nextErrors.email) return;
+    if (nextErrors.email) {
+      setFailed(true);
+      setMessage("Corrigez l’adresse e-mail signalée avant de continuer.");
+      emailRef.current?.focus();
+      return;
+    }
     const result = await requestAuthentication(
       resend ? "/auth/verification-email" : "/auth/password-reset",
       { body: { email } },
     );
+    setFailed(!result.ok);
     setMessage(
       result.ok
         ? "Si cette adresse peut recevoir ce message, les prochaines étapes vous ont été indiquées."
@@ -276,12 +293,13 @@ export function EmailActionForm({ action }: { action: "resend" | "recovery" }) {
         aria-invalid={Boolean(errors.email)}
         aria-describedby={errors.email ? `${action}-email-error` : undefined}
         required
+        ref={emailRef}
       />
       <FieldError id={`${action}-email-error`}>{errors.email}</FieldError>
       <button type="submit">
         {resend ? "Renvoyer l’e-mail" : "Demander un lien"}
       </button>
-      <FormMessage message={message} />
+      <FormMessage message={message} error={failed} />
     </form>
   );
 }
@@ -319,6 +337,8 @@ export function PasswordResetConfirmationForm({ token }: { token: string }) {
   const [message, setMessage] = useState<string>();
   const [failed, setFailed] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmationRef = useRef<HTMLInputElement>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -330,7 +350,11 @@ export function PasswordResetConfirmationForm({ token }: { token: string }) {
       confirmation,
     );
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (Object.keys(nextErrors).length) {
+      if (nextErrors.password) passwordRef.current?.focus();
+      else confirmationRef.current?.focus();
+      return;
+    }
     const result = await requestAuthentication("/auth/password-reset/confirm", {
       body: { token, password },
     });
@@ -353,6 +377,7 @@ export function PasswordResetConfirmationForm({ token }: { token: string }) {
         minLength={12}
         maxLength={128}
         required
+        ref={passwordRef}
         autoComplete="new-password"
         aria-invalid={Boolean(errors.password)}
         aria-describedby={errors.password ? "password-error" : "password-help"}
@@ -367,6 +392,7 @@ export function PasswordResetConfirmationForm({ token }: { token: string }) {
         name="confirmation"
         type="password"
         required
+        ref={confirmationRef}
         autoComplete="new-password"
         aria-invalid={Boolean(errors.confirmation)}
         aria-describedby={

@@ -14,6 +14,17 @@ export type IdentityMail = {
 const testOutbox: IdentityMail[] = []
 
 /**
+ * {host is a configured development SMTP hostname} => {returns whether it resolves by name to the local loopback only}
+ *
+ * Refus: non-loopback hosts are false and must never be used for Mailpit delivery.
+ * Effects: none.
+ * Invariants: a development configuration cannot direct token-bearing email to a remote network host.
+ */
+export function isLoopbackMailpitHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
+/**
  * {test delivery has been used} => {removes all captured transactional messages}
  *
  * Effects: clears process-local test state only.
@@ -73,6 +84,9 @@ export async function deliverIdentityMail(message: IdentityMail): Promise<void> 
 async function deliverToMailpit(message: IdentityMail): Promise<void> {
   const host = env.get('MAILPIT_HOST') ?? '127.0.0.1'
   const port = env.get('MAILPIT_PORT') ?? 1025
+  if (!isLoopbackMailpitHost(host)) {
+    throw new Error('MAILPIT_HOST must be a local loopback address in development.')
+  }
   const socket = new Socket()
   const responses: number[] = []
   let wake: ((code: number) => void) | undefined
@@ -88,6 +102,13 @@ async function deliverToMailpit(message: IdentityMail): Promise<void> {
       } else responses.push(code)
     }
   })
+  /**
+   * {the local SMTP socket has an available or future protocol response} => {resolves with exactly one response code or refuses after a bounded wait}
+   *
+   * Errors: rejects on socket failure or when Mailpit does not answer within five seconds.
+   * Effects: registers temporary socket listeners and a timer.
+   * Invariants: response ordering is preserved and SMTP payloads are never logged.
+   */
   const nextResponse = () =>
     new Promise<number>((resolve, reject) => {
       const received = responses.shift()
@@ -105,10 +126,24 @@ async function deliverToMailpit(message: IdentityMail): Promise<void> {
       }
       socket.once('error', reject)
     })
+  /**
+   * {one SMTP response is pending and expected is a valid SMTP success code} => {accepts only the expected response code}
+   *
+   * Errors: rejects when Mailpit refuses a command.
+   * Effects: consumes one queued SMTP response.
+   * Invariants: a refused command prevents the message from being treated as delivered.
+   */
   const waitFor = async (expected: number) => {
     const actual = await nextResponse()
     if (actual !== expected) throw new Error('Local SMTP service rejected the message.')
   }
+  /**
+   * {line is an SMTP command without sensitive logging and the socket is connected} => {writes one command and verifies its response}
+   *
+   * Errors: propagates connection, timeout and SMTP-refusal failures.
+   * Effects: writes one CRLF-terminated command to the local Mailpit socket.
+   * Invariants: commands are evaluated sequentially.
+   */
   const command = async (line: string, expected: number) => {
     socket.write(`${line}\r\n`)
     await waitFor(expected)
