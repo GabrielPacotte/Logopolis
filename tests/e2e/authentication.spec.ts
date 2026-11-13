@@ -150,14 +150,28 @@ test.describe("authentication journey with local Mailpit", () => {
     await page.goto("/auth/register");
     await expect(
       new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .withTags([
+          "wcag2a",
+          "wcag2aa",
+          "wcag21a",
+          "wcag21aa",
+          "wcag22a",
+          "wcag22aa",
+        ])
         .analyze(),
     ).resolves.toMatchObject({ violations: [] });
 
     await page.goto("/auth/password-reset");
     await expect(
       new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .withTags([
+          "wcag2a",
+          "wcag2aa",
+          "wcag21a",
+          "wcag21aa",
+          "wcag22a",
+          "wcag22aa",
+        ])
         .analyze(),
     ).resolves.toMatchObject({ violations: [] });
   });
