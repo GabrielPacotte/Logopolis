@@ -43,6 +43,11 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.27
+        ports:
+          - 1025:1025
+          - 8025:8025
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -87,6 +92,27 @@ jobs:
         run: npm run build --workspace=web
       - name: Build API application
         run: npm run build --workspace=api
+      - name: Start local services for browser E2E
+        env:
+          MAILPIT_HOST: 127.0.0.1
+          MAILPIT_PORT: 1025
+        run: |
+          (cd apps/api && NODE_ENV=development node build/bin/server.js > /tmp/logopolis-api-e2e.log 2>&1 &)
+          (NODE_ENV=production PORT=3000 npm run start --workspace=web > /tmp/logopolis-web-e2e.log 2>&1 &)
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:3333/health/live >/dev/null && curl --fail --silent http://localhost:3000 >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/logopolis-api-e2e.log /tmp/logopolis-web-e2e.log
+          exit 1
+      - name: Browser E2E with Mailpit
+        env:
+          NODE_ENV: development
+          E2E_WEB_URL: http://localhost:3000
+          E2E_MAILPIT_URL: http://127.0.0.1:8025
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - name: Documentation links
         run: npm run check:docs
       - name: Agent governance
