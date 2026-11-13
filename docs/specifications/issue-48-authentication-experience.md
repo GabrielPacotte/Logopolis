@@ -38,7 +38,15 @@ Les messages de l’interface ne promettent jamais qu’un e-mail a été effect
 
 ### Inscription
 
-L’inscription recueille les données prévues par #17. Les erreurs de saisie identifient le champ et la règle concernée lorsqu’il est sûr de le faire. Une inscription acceptée mène vers l’état « attente de vérification ».
+L’inscription recueille les données prévues par #17. Les erreurs de saisie
+identifient le champ et la règle concernée lorsqu’il est sûr de le faire. Une
+inscription acceptée mène vers un état post-inscription neutre. Cet état ne
+promet pas qu’un e-mail a été envoyé ou qu’un compte a été créé : il indique
+que les prochaines étapes sont envoyées lorsque cela est possible et offre la
+connexion, la récupération d’accès et l’accès au parcours de renvoi de
+vérification. Le véritable état « attente de vérification » est réservé au
+parcours où la personne choisit explicitement de gérer une vérification en
+attente.
 
 ### Attente de vérification
 

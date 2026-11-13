@@ -4,7 +4,11 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CredentialsForm, EmailActionForm } from "./auth-client";
+import {
+  CredentialsForm,
+  EmailActionForm,
+  RegistrationSubmitted,
+} from "./auth-client";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -69,5 +73,26 @@ describe("authentication web components", () => {
     expect(
       screen.queryByRole("button", { name: "Demander un lien" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not promise an e-mail after a neutrally accepted registration", () => {
+    render(<RegistrationSubmitted />);
+
+    expect(
+      screen.getByRole("heading", { name: "Poursuivre votre inscription" }),
+    ).toBeVisible();
+    expect(screen.getByText(/lorsque cela est possible/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Se connecter" })).toHaveAttribute(
+      "href",
+      "/auth",
+    );
+    expect(
+      screen.getByRole("link", { name: "Mot de passe oublié ?" }),
+    ).toHaveAttribute("href", "/auth/password-reset");
+    expect(
+      screen.getByRole("link", {
+        name: "Vous attendez un e-mail de vérification ?",
+      }),
+    ).toHaveAttribute("href", "/auth/verification-email");
   });
 });

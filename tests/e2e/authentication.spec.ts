@@ -40,6 +40,21 @@ async function waitForMailLink(
   throw new Error("Expected a local Mailpit message for the E2E scenario.");
 }
 
+async function mailpitMessageCount(
+  request: APIRequestContext,
+  recipient: string,
+): Promise<number> {
+  const response = await request.get(`${mailpitUrl}/api/v1/messages`);
+  const payload = (await response.json()) as {
+    messages?: Array<{ To?: Array<{ Address?: string }> }>;
+  };
+  return (
+    payload.messages?.filter((candidate) =>
+      candidate.To?.some((to) => to.Address === recipient),
+    ).length ?? 0
+  );
+}
+
 test.describe("authentication journey with local Mailpit", () => {
   test("registers, verifies, signs in and opens the minimal account", async ({
     page,
@@ -54,7 +69,7 @@ test.describe("authentication journey with local Mailpit", () => {
     await page.getByLabel("Confirmer le mot de passe").fill("a-safe-password");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
     await expect(
-      page.getByRole("heading", { name: "Vérifiez votre adresse e-mail" }),
+      page.getByRole("heading", { name: "Poursuivre votre inscription" }),
     ).toBeVisible();
     const verificationLink = await waitForMailLink(
       request,
@@ -78,6 +93,48 @@ test.describe("authentication journey with local Mailpit", () => {
     ).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
     await expect(page.getByText("Adresse vérifiée")).toBeVisible();
+  });
+
+  test("does not mislead a person who registers an existing address", async ({
+    page,
+    request,
+  }) => {
+    const email = `existing-${Date.now()}@example.test`;
+    const testPassphrase = "a-safe-password";
+    const register = async () => {
+      await page.goto("/auth/register");
+      await page.getByLabel("Adresse e-mail").fill(email);
+      await page
+        .getByLabel("Mot de passe", { exact: true })
+        .fill(testPassphrase);
+      await page.getByLabel("Confirmer le mot de passe").fill(testPassphrase);
+      await page.getByRole("button", { name: "Créer mon compte" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Poursuivre votre inscription" }),
+      ).toBeVisible();
+    };
+
+    await register();
+    await waitForMailLink(request, email, "/auth/verification-email");
+    expect(await mailpitMessageCount(request, email)).toBe(1);
+
+    await register();
+    await expect(page.getByText(/lorsque cela est possible/)).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Se connecter" }),
+    ).toHaveAttribute("href", "/auth");
+    await expect(
+      page.getByRole("link", { name: "Mot de passe oublié ?" }),
+    ).toHaveAttribute("href", "/auth/password-reset");
+    await expect(
+      page.getByRole("link", {
+        name: "Vous attendez un e-mail de vérification ?",
+      }),
+    ).toHaveAttribute("href", "/auth/verification-email");
+    await expect(
+      page.getByRole("heading", { name: "Vérifiez votre adresse e-mail" }),
+    ).not.toBeVisible();
+    await expect.poll(() => mailpitMessageCount(request, email)).toBe(1);
   });
 
   test("shows explicit validation errors and resets a password through Mailpit", async ({
@@ -106,7 +163,7 @@ test.describe("authentication journey with local Mailpit", () => {
     await page.getByLabel("Confirmer le mot de passe").fill("a-safe-password");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
     await expect(
-      page.getByRole("heading", { name: "Vérifiez votre adresse e-mail" }),
+      page.getByRole("heading", { name: "Poursuivre votre inscription" }),
     ).toBeVisible();
     await page.goto("/auth/password-reset");
     await page.getByLabel("Adresse e-mail").fill("not-an-email");

@@ -191,7 +191,7 @@ export function CredentialsForm({ mode }: { mode: "register" | "login" }) {
       { body: { email, password } },
     );
     if (result.ok && isRegister) {
-      router.push("/auth/verification-email?pending=1");
+      router.push("/auth/registration-submitted");
       return;
     }
     if (result.ok) {
@@ -319,6 +319,36 @@ export function EmailActionForm({ action }: { action: "resend" | "recovery" }) {
       </button>
       <FormMessage message={message} error={failed} />
     </form>
+  );
+}
+
+/**
+ * {a visitor has submitted registration data that the server accepted neutrally} => {explains only safe next actions without asserting account or mail state}
+ *
+ * Errors/refus: none; navigation links remain available without a successful
+ * e-mail delivery.
+ * Effects: renders links only.
+ * Invariants: never confirms whether the submitted address created an account,
+ * already existed, or received an e-mail.
+ */
+export function RegistrationSubmitted() {
+  return (
+    <AuthLayout title="Poursuivre votre inscription">
+      <p>
+        Si vous venez de créer un compte, les prochaines étapes vous ont été
+        indiquées par e-mail lorsque cela est possible.
+      </p>
+      <p className="auth-help">
+        Si vous avez déjà un compte, connectez-vous ou récupérez votre accès.
+      </p>
+      <p className="auth-links">
+        <Link href="/auth">Se connecter</Link>
+        <Link href="/auth/password-reset">Mot de passe oublié ?</Link>
+        <Link href="/auth/verification-email">
+          Vous attendez un e-mail de vérification ?
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
 
